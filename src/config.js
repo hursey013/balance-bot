@@ -1,94 +1,35 @@
-import path from 'node:path';
-import { readFileSync } from 'node:fs';
-import 'dotenv/config';
+import path from "node:path";
+import "dotenv/config";
 
-const numberFromEnv = (value, fallback) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+const accessUrl = process.env.SIMPLEFIN_ACCESS_URL?.trim() ?? "";
+const cronExpression =
+  process.env.POLL_CRON_EXPRESSION?.trim() || "*/5 * * * *";
+const appriseApiUrl =
+  process.env.APPRISE_API_URL?.trim() || "http://apprise:8000/notify";
+const stateFilePath =
+  process.env.STATE_FILE_PATH?.trim() || path.resolve("data/state.json");
 
-const trimOrEmpty = (value) => value?.trim() ?? '';
-
-const normalizeList = (value) => {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map(trimOrEmpty).filter(Boolean);
-  }
-  return String(value)
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-
-const parseJsonSource = (raw) => {
-  const value = trimOrEmpty(raw);
-  if (!value) return null;
-  const source = value.startsWith('@') ? value.slice(1) : value;
-  const text = source.startsWith('[') || source.startsWith('{')
-    ? source
-    : readFileSync(path.resolve(source), 'utf8');
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    throw new Error(`Failed to parse notification targets JSON: ${error.message}`);
-  }
-};
-
-const normalizeTargets = (rawTargets, fallbackUrls) => {
-  const input = Array.isArray(rawTargets)
-    ? rawTargets
-    : rawTargets && Array.isArray(rawTargets.targets)
-      ? rawTargets.targets
-      : [];
-
-  const targets = input
-    .map((target) => {
-      if (!target || typeof target !== 'object') return null;
-      const accountIds = normalizeList(target.accountIds);
-      const urls = normalizeList(target.appriseUrls ?? target.urls);
-      if (!urls.length) return null;
-      return {
-        name: trimOrEmpty(target.name) || null,
-        accountIds: accountIds.length ? accountIds : ['*'],
-        appriseUrls: urls,
-      };
-    })
-    .filter(Boolean);
-
-  if (targets.length) {
-    return targets;
-  }
-
-  const urls = normalizeList(fallbackUrls);
-  if (!urls.length) return [];
-  return [
-    {
-      name: 'Default',
-      accountIds: ['*'],
-      appriseUrls: urls,
-    },
-  ];
-};
-
-const rawTargets = parseJsonSource(process.env.ACCOUNT_NOTIFICATION_TARGETS);
+const rawTargets = process.env.ACCOUNT_NOTIFICATION_TARGETS;
+const parsedTargets = rawTargets ? JSON.parse(rawTargets) : [];
+const targets = Array.isArray(parsedTargets)
+  ? parsedTargets
+  : (parsedTargets?.targets ?? []);
 
 const config = {
   simplefin: {
-    accessUrl: trimOrEmpty(process.env.SIMPLEFIN_ACCESS_URL),
-    timeoutMs: numberFromEnv(process.env.SIMPLEFIN_TIMEOUT_MS, 10000),
+    accessUrl,
   },
   polling: {
-    cronExpression: trimOrEmpty(process.env.POLL_CRON_EXPRESSION) || '*/5 * * * *',
+    cronExpression,
   },
   notifier: {
-    appriseApiUrl: trimOrEmpty(process.env.APPRISE_API_URL) || 'http://apprise:8000/notify',
-    requestTimeoutMs: numberFromEnv(process.env.APPRISE_TIMEOUT_MS, 10000),
+    appriseApiUrl,
   },
   notifications: {
-    targets: normalizeTargets(rawTargets, process.env.APPRISE_NOTIFICATION_URLS),
+    targets,
   },
   storage: {
-    stateFilePath: trimOrEmpty(process.env.STATE_FILE_PATH) || path.resolve('data/state.json'),
+    stateFilePath,
   },
 };
 

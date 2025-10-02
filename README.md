@@ -31,7 +31,6 @@ services:
     restart: unless-stopped
     environment:
       SIMPLEFIN_ACCESS_URL: "https://user:secret@bridge.simplefin.org/access/..." # paste the full access link (credentials included)
-      SIMPLEFIN_TIMEOUT_MS: "10000" # API call timeout in milliseconds
       POLL_CRON_EXPRESSION: "*/5 * * * *" # cron schedule for checking SimpleFIN (keep it chill)
       ACCOUNT_NOTIFICATION_TARGETS: >- # JSON array describing who should receive which account updates
         [
@@ -49,7 +48,6 @@ services:
           }
         ]
       APPRISE_API_URL: "http://apprise:8000/notify" # URL where Apprise listens inside the stack
-      APPRISE_TIMEOUT_MS: "10000" # timeout for calling Apprise
       STATE_FILE_PATH: "/app/data/state.json" # where the bot tracks its last-seen balances
     volumes:
       - ./data:/app/data

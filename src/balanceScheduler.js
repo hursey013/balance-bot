@@ -1,9 +1,9 @@
-import cron from 'node-cron';
-import logger from './logger.js';
+import cron from "node-cron";
+import logger from "./logger.js";
 
 const parseNumeric = (value) => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (typeof value === 'string') {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -12,44 +12,48 @@ const parseNumeric = (value) => {
 
 const resolveBalanceInfo = (account) => {
   if (!account) return null;
-  const rawBalance = account.balance;
-  const currency = account.currency || rawBalance?.currency || 'USD';
 
-  let amount = parseNumeric(rawBalance);
-  if (amount === null && rawBalance && typeof rawBalance === 'object') {
-    amount =
-      parseNumeric(rawBalance.current) ??
-      parseNumeric(rawBalance.available) ??
-      parseNumeric(rawBalance.amount) ??
-      parseNumeric(rawBalance.value);
-  }
+  const availableAmount = parseNumeric(account["available-balance"]);
+  const balanceAmount = parseNumeric(account.balance);
+  const amount = availableAmount ?? balanceAmount;
 
   if (amount === null) {
     return null;
   }
 
+  const currency = account.currency || "USD";
   return { amount, currency };
 };
 
 const formatCurrency = (amount, currency) => {
   if (!Number.isFinite(amount)) {
-    return `${amount ?? '0'} ${currency}`;
+    return `${amount ?? "0"} ${currency}`;
   }
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(amount);
   } catch {
     return `${amount.toFixed(2)} ${currency}`;
   }
 };
 
-const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config }) => {
+const createBalanceScheduler = ({
+  simplefinClient,
+  notifier,
+  stateStore,
+  config,
+}) => {
   const targets = config.notifications.targets || [];
-  const wildcardTargets = targets.filter((target) => target.accountIds.includes('*'));
+  const wildcardTargets = targets.filter((target) =>
+    target.accountIds.includes("*"),
+  );
   const accountTargets = new Map();
 
   for (const target of targets) {
     for (const accountId of target.accountIds) {
-      if (accountId === '*') continue;
+      if (accountId === "*") continue;
       const list = accountTargets.get(accountId) ?? [];
       list.push(target);
       accountTargets.set(accountId, list);
@@ -68,7 +72,7 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
 
   const handleAccount = async (account) => {
     if (!account || !account.id) {
-      logger.warn('Skipping account without id');
+      logger.warn("Skipping account without id");
       return;
     }
 
@@ -79,7 +83,9 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
 
     const balanceInfo = resolveBalanceInfo(account);
     if (!balanceInfo) {
-      logger.warn('Could not resolve account balance', { accountId: account.id });
+      logger.warn("Could not resolve account balance", {
+        accountId: account.id,
+      });
       return;
     }
 
@@ -88,7 +94,7 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
 
     if (previousBalance === null) {
       await stateStore.setLastBalance(account.id, currentBalance);
-      logger.info('Stored baseline balance', {
+      logger.info("Stored baseline balance", {
         accountId: account.id,
         accountName: account.name || account.id,
         balance: currentBalance,
@@ -107,28 +113,29 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
     const accountName = account.name || account.nickname || account.id;
     const formattedBalance = formatCurrency(currentBalance, currency);
     const formattedDelta = formatCurrency(Math.abs(delta), currency);
-    const signedDelta = `${delta > 0 ? '+' : '-'}${formattedDelta}`;
+    const signedDelta = `${delta > 0 ? "+" : "-"}${formattedDelta}`;
+    const deltaColor = delta > 0 ? "#007700" : "#B00000";
 
     for (const target of matchedTargets) {
-      const title = target.name ? `${target.name} balance update` : `${accountName} balance update`;
       const body = [
-        `Account: **${accountName}** (${account.id})`,
-        `Change: ${signedDelta}`,
-        `New balance: **${formattedBalance}**`,
-      ].join('\n');
+        `Account: <b>${accountName}</b>`,
+        `Change: <font color="${deltaColor}">${signedDelta}</font>`,
+        `New balance: <b>${formattedBalance}</b>`,
+      ].join("<br>");
 
       await notifier.sendNotification({
-        title,
+        title: "Balance update",
         body,
         urls: target.appriseUrls,
+        configKey: target.appriseConfigKey,
       });
 
-      logger.info('Sent balance update', {
+      logger.info("Sent balance update", {
         accountId: account.id,
         accountName,
         delta,
         newBalance: currentBalance,
-        target: target.name || 'unnamed',
+        target: target.name || "unnamed",
       });
     }
 
@@ -137,24 +144,27 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
 
   const runOnce = async () => {
     if (running) {
-      logger.warn('Skipping balance check because the previous run is still running');
+      logger.warn(
+        "Skipping balance check because the previous run is still running",
+      );
       return;
     }
     running = true;
     try {
-      const needsAllAccounts = wildcardTargets.length > 0 || targetedAccountIds.length === 0;
+      const needsAllAccounts =
+        wildcardTargets.length > 0 || targetedAccountIds.length === 0;
       const accounts = await simplefinClient.fetchAccounts(
         needsAllAccounts ? undefined : { accountIds: targetedAccountIds },
       );
       if (!Array.isArray(accounts) || !accounts.length) {
-        logger.warn('SimpleFIN returned no accounts');
+        logger.warn("SimpleFIN returned no accounts");
         return;
       }
       for (const account of accounts) {
         try {
           await handleAccount(account);
         } catch (error) {
-          logger.error('Failed to process account', {
+          logger.error("Failed to process account", {
             accountId: account?.id,
             error: error.message,
           });
@@ -165,9 +175,10 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
     }
   };
 
-  const scheduleRun = () => runOnce().catch((error) => {
-    logger.error('Balance check failed', { error: error.message });
-  });
+  const scheduleRun = () =>
+    runOnce().catch((error) => {
+      logger.error("Balance check failed", { error: error.message });
+    });
 
   const start = () => {
     if (task) return;
@@ -175,7 +186,7 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
     if (!cron.validate(schedule)) {
       throw new Error(`Invalid cron expression: ${schedule}`);
     }
-    logger.info('Starting balance scheduler', {
+    logger.info("Starting balance scheduler", {
       schedule,
       targetCount: targets.length,
     });

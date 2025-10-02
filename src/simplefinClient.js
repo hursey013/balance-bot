@@ -1,30 +1,23 @@
-const requestJson = async ({ url, timeoutMs, headers }) => {
-  const signal = AbortSignal.timeout(timeoutMs);
-  try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        ...(headers ?? {}),
-      },
-      signal,
-    });
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`SimpleFIN request failed with status ${response.status}: ${body}`);
-    }
-
-    return response.json();
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error(`SimpleFIN request timed out after ${timeoutMs} ms`);
-    }
-    throw error;
+const requestJson = async ({ url, headers }) => {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      ...(headers ?? {}),
+    },
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `SimpleFIN request failed with status ${response.status}: ${body}`,
+    );
   }
+
+  return response.json();
 };
 
-const createSimplefinClient = ({ accessUrl, timeoutMs = 10000 }) => {
+const createSimplefinClient = ({ accessUrl }) => {
   if (!accessUrl) {
-    throw new Error('SimpleFIN access URL is required');
+    throw new Error("SimpleFIN access URL is required");
   }
 
   let access;
@@ -34,32 +27,33 @@ const createSimplefinClient = ({ accessUrl, timeoutMs = 10000 }) => {
     throw new Error(`Invalid SimpleFIN access URL: ${error.message}`);
   }
 
-  const username = access.username ? decodeURIComponent(access.username) : '';
-  const password = access.password ? decodeURIComponent(access.password) : '';
+  const username = access.username ? decodeURIComponent(access.username) : "";
+  const password = access.password ? decodeURIComponent(access.password) : "";
   const hasCredentials = username || password;
   const authHeader = hasCredentials
-    ? `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    ? `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
     : null;
   if (hasCredentials) {
-    access.username = '';
-    access.password = '';
+    access.username = "";
+    access.password = "";
   }
   const baseUrl = access.toString();
 
   const fetchAccounts = async ({ accountIds } = {}) => {
     const requestUrl = new URL(baseUrl);
-    requestUrl.searchParams.set('balances-only', '1');
+    requestUrl.searchParams.set("balances-only", "1");
 
     if (Array.isArray(accountIds) && accountIds.length) {
-      const uniqueIds = [...new Set(accountIds.map((id) => `${id}`.trim()).filter(Boolean))];
+      const uniqueIds = [
+        ...new Set(accountIds.map((id) => `${id}`.trim()).filter(Boolean)),
+      ];
       for (const id of uniqueIds) {
-        requestUrl.searchParams.append('account', id);
+        requestUrl.searchParams.append("account", id);
       }
     }
 
     const response = await requestJson({
       url: requestUrl.toString(),
-      timeoutMs,
       headers: authHeader
         ? {
             Authorization: authHeader,
@@ -67,7 +61,7 @@ const createSimplefinClient = ({ accessUrl, timeoutMs = 10000 }) => {
         : undefined,
     });
     if (!response || !Array.isArray(response.accounts)) {
-      throw new Error('Unexpected SimpleFIN response: missing accounts array');
+      throw new Error("Unexpected SimpleFIN response: missing accounts array");
     }
 
     return response.accounts;

@@ -1,7 +1,7 @@
-import { mkdir } from 'node:fs/promises';
-import path from 'node:path';
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+import { Low } from "lowdb";
+import { JSONFile } from "lowdb/node";
 
 const createDefaultState = () => ({ accounts: {} });
 
@@ -14,10 +14,10 @@ const createStateStore = (filePath) => {
       const adapter = new JSONFile(filePath);
       db = new Low(adapter, createDefaultState());
       await db.read();
-      if (!db.data || typeof db.data !== 'object') {
+      if (!db.data || typeof db.data !== "object") {
         db.data = createDefaultState();
       }
-      if (!db.data.accounts || typeof db.data.accounts !== 'object') {
+      if (!db.data.accounts || typeof db.data.accounts !== "object") {
         db.data.accounts = {};
       }
     }

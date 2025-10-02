@@ -1,45 +1,53 @@
 const postNotification = async ({
   appriseApiUrl,
   urls,
-  requestTimeoutMs,
   title,
   body,
 }) => {
-  const signal = AbortSignal.timeout(requestTimeoutMs);
-  try {
-    const response = await fetch(appriseApiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        urls,
-        title,
-        body,
-        format: 'markdown',
-      }),
-      signal,
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Apprise notification failed with status ${response.status}: ${text}`);
-    }
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error(`Apprise request timed out after ${requestTimeoutMs} ms`);
-    }
-    throw error;
+  const payload = {
+    title,
+    body,
+    format: "html",
+  };
+
+  if (Array.isArray(urls) && urls.length) {
+    payload.urls = urls;
+  }
+
+  const response = await fetch(appriseApiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      `Apprise notification failed with status ${response.status}: ${text}`,
+    );
   }
 };
 
-const createNotifier = ({ appriseApiUrl, requestTimeoutMs = 10000 }) => {
-  const sendNotification = async ({ title, body, urls }) => {
+const trimTrailingSlash = (value) => value.replace(/\/+$/, "");
+
+const createNotifier = ({ appriseApiUrl }) => {
+  if (!appriseApiUrl) {
+    throw new Error("Apprise API URL is required");
+  }
+
+  const baseUrl = trimTrailingSlash(appriseApiUrl);
+
+  const sendNotification = async ({ title, body, urls, configKey }) => {
     const targets = Array.isArray(urls) ? urls.filter(Boolean) : [];
-    if (!targets.length) {
-      throw new Error('No Apprise URLs provided for notification.');
+    const key = configKey ? configKey.trim() : "";
+    if (!targets.length && !key) {
+      throw new Error("No Apprise destination provided for notification.");
     }
+
+    const endpoint = key ? `${baseUrl}/${encodeURIComponent(key)}` : baseUrl;
+
     await postNotification({
-      appriseApiUrl,
-      urls: targets,
-      requestTimeoutMs,
+      appriseApiUrl: endpoint,
+      urls: key ? undefined : targets,
       title,
       body,
     });
