@@ -37,14 +37,12 @@ services:
           {
             "name": "Ellie",
             "accountIds": ["acct-123"],
-            "appriseUrls": "mailto://ellie@example.com"
+            "appriseConfigKey": "ellie"
           },
           {
-            "name": "Max",
-            "accountIds": ["acct-456", "acct-789"],
-            "appriseUrls": [
-              "discord://webhook-id/webhook-token"
-            ]
+            "name": "Family Room",
+            "accountIds": ["*"],
+            "appriseUrls": ["discord://webhook-id/webhook-token"]
           }
         ]
       APPRISE_API_URL: "http://apprise:8000/notify" # URL where Apprise listens inside the stack
@@ -66,6 +64,8 @@ services:
     ports:
       - "8000:8000"
 ```
+
+Each target can point at a stateful Apprise configuration entry via `appriseConfigKey` (recommended for long-lived destinations like each kid's device bundle) or provide a list of inline `appriseUrls` for quick one-off routing. Mix and match as needed—Balance Bot will call Apprise with whichever option you supply per target.
 
 Tweak the Apprise config in `apprise/apprise.yml` (it shows up after the first launch) to add more destinations or fancy formatting. The `data/` folder sticks around between restarts so the bot remembers what it already reported.
 

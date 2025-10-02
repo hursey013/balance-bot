@@ -32,6 +32,11 @@ test("createConfig respects override values", () => {
       {
         name: "Test",
         accountIds: ["acct-123"],
+        appriseConfigKey: "test-users",
+      },
+      {
+        name: "Alerts",
+        accountIds: ["acct-999"],
         appriseUrls: ["pover://token@user"],
       },
     ]),
@@ -58,6 +63,11 @@ test("createConfig respects override values", () => {
     {
       name: "Test",
       accountIds: ["acct-123"],
+      appriseConfigKey: "test-users",
+    },
+    {
+      name: "Alerts",
+      accountIds: ["acct-999"],
       appriseUrls: ["pover://token@user"],
     },
   ]);

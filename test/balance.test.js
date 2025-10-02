@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import createBalanceScheduler from "../src/balanceScheduler.js";
+import createBalanceProcessor from "../src/balance.js";
 
-test("balance scheduler notifies when balances change", async (t) => {
+test("balance processor notifies when balances change", async (t) => {
   const fetchArgs = [];
   const accountSnapshots = [
     [
@@ -38,27 +38,13 @@ test("balance scheduler notifies when balances change", async (t) => {
   };
 
   const balances = new Map();
-  const stateStore = {
+  const store = {
     getLastBalance: async (id) =>
       balances.has(id) ? balances.get(id) : null,
     setLastBalance: async (id, value) => {
       balances.set(id, value);
     },
     save: async () => {},
-  };
-
-  let scheduledCallback;
-  let stopCalled = false;
-  const cronLib = {
-    validate: () => true,
-    schedule: (expression, callback) => {
-      scheduledCallback = callback;
-      return {
-        stop: () => {
-          stopCalled = true;
-        },
-      };
-    },
   };
 
   const logEntries = [];
@@ -68,10 +54,10 @@ test("balance scheduler notifies when balances change", async (t) => {
     error: (message, meta) => logEntries.push({ level: "error", message, meta }),
   };
 
-  const scheduler = createBalanceScheduler({
+  const balance = createBalanceProcessor({
     simplefinClient,
     notifier,
-    stateStore,
+    store,
     config: {
       polling: { cronExpression: "*/5 * * * *" },
       notifications: {
@@ -85,19 +71,17 @@ test("balance scheduler notifies when balances change", async (t) => {
         ],
       },
     },
-    cronLib,
     logger,
   });
 
-  scheduler.start();
-  await new Promise((resolve) => setImmediate(resolve));
+  await balance.checkBalances();
 
   assert.equal(fetchArgs.length, 1);
   assert.deepEqual(fetchArgs[0], { accountIds: ["acct-1"] });
   assert.equal(sentNotifications.length, 0);
   assert.equal(balances.get("acct-1"), 100);
 
-  await scheduledCallback();
+  await balance.checkBalances();
 
   assert.equal(fetchArgs.length, 2);
   assert.equal(sentNotifications.length, 1);
@@ -107,7 +91,6 @@ test("balance scheduler notifies when balances change", async (t) => {
     notification.body.includes("<font color=\"#B00000\">"));
   assert.equal(balances.get("acct-1"), 150.5);
 
-  scheduler.stop();
-  assert.equal(stopCalled, true);
+  assert.equal(balance.isRunning(), false);
   assert(logEntries.some((entry) => entry.level === "info"));
 });

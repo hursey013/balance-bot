@@ -5,7 +5,7 @@ import { JSONFile } from "lowdb/node";
 
 const createDefaultState = () => ({ accounts: {} });
 
-const createStateStore = (filePath) => {
+const createStore = (filePath) => {
   let db;
 
   const ensureDb = async () => {
@@ -43,4 +43,4 @@ const createStateStore = (filePath) => {
   return { save, getLastBalance, setLastBalance };
 };
 
-export default createStateStore;
+export default createStore;

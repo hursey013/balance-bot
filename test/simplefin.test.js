@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import createSimplefinClient from "../src/simplefinClient.js";
+import createSimplefin from "../src/simplefin.js";
 
 const withTempDir = async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "balance-bot-test-"));
@@ -38,7 +38,7 @@ test("SimpleFIN client caches results when TTL is positive", async (t) => {
     };
   };
 
-  const client = createSimplefinClient({
+  const client = createSimplefin({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 60_000,
@@ -72,7 +72,7 @@ test("SimpleFIN client bypasses cache when TTL is zero", async (t) => {
     };
   };
 
-  const client = createSimplefinClient({
+  const client = createSimplefin({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -102,7 +102,7 @@ test("SimpleFIN client includes Basic Auth credentials", async (t) => {
     return { ok: true, json: async () => ({ accounts: [] }) };
   };
 
-  const client = createSimplefinClient({
+  const client = createSimplefin({
     accessUrl: "https://name:secret@beta-bridge.simplefin.org/access",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -131,7 +131,7 @@ test("SimpleFIN client throws when SimpleFIN responds without accounts", async (
 
   global.fetch = async () => ({ ok: true, json: async () => ({}) });
 
-  const client = createSimplefinClient({
+  const client = createSimplefin({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -161,7 +161,7 @@ test("SimpleFIN client surfaces HTTP failures", async (t) => {
     text: async () => "Internal Server Error",
   });
 
-  const client = createSimplefinClient({
+  const client = createSimplefin({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,

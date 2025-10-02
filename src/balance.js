@@ -1,4 +1,3 @@
-import cron from "node-cron";
 import logger from "./logger.js";
 
 const parseNumeric = (value) => {
@@ -39,12 +38,21 @@ const formatCurrency = (amount, currency) => {
   }
 };
 
-const createBalanceScheduler = ({
+const uniqueEntries = (items) => {
+  const result = [];
+  for (const item of items) {
+    if (!result.includes(item)) {
+      result.push(item);
+    }
+  }
+  return result;
+};
+
+const createBalanceProcessor = ({
   simplefinClient,
   notifier,
-  stateStore,
+  store,
   config,
-  cronLib = cron,
   logger: loggerLib = logger,
 }) => {
   const log = loggerLib;
@@ -67,13 +75,12 @@ const createBalanceScheduler = ({
 
   const selectTargets = (accountId) => {
     const specific = accountTargets.get(accountId) ?? [];
-    return [...new Set([...specific, ...wildcardTargets])];
+    return uniqueEntries([...specific, ...wildcardTargets]);
   };
 
-  let task = null;
   let running = false;
 
-  const handleAccount = async (account) => {
+  const processAccount = async (account) => {
     if (!account || !account.id) {
       log.warn("Skipping account without id");
       return;
@@ -93,10 +100,10 @@ const createBalanceScheduler = ({
     }
 
     const { amount: currentBalance, currency } = balanceInfo;
-    const previousBalance = await stateStore.getLastBalance(account.id);
+    const previousBalance = await store.getLastBalance(account.id);
 
     if (previousBalance === null) {
-      await stateStore.setLastBalance(account.id, currentBalance);
+      await store.setLastBalance(account.id, currentBalance);
       log.info("Stored baseline balance", {
         accountId: account.id,
         accountName: account.name || account.id,
@@ -108,7 +115,7 @@ const createBalanceScheduler = ({
     const delta = currentBalance - previousBalance;
     if (Math.abs(delta) < 0.0001) {
       if (previousBalance !== currentBalance) {
-        await stateStore.setLastBalance(account.id, currentBalance);
+        await store.setLastBalance(account.id, currentBalance);
       }
       return;
     }
@@ -142,30 +149,34 @@ const createBalanceScheduler = ({
       });
     }
 
-    await stateStore.setLastBalance(account.id, currentBalance);
+    await store.setLastBalance(account.id, currentBalance);
   };
 
-  const runOnce = async () => {
+  const fetchRelevantAccounts = async () => {
+    const needsAllAccounts =
+      wildcardTargets.length > 0 || targetedAccountIds.length === 0;
+    return simplefinClient.fetchAccounts(
+      needsAllAccounts ? undefined : { accountIds: targetedAccountIds },
+    );
+  };
+
+  const checkBalances = async () => {
     if (running) {
       log.warn(
         "Skipping balance check because the previous run is still running",
       );
-      return;
+      return false;
     }
     running = true;
     try {
-      const needsAllAccounts =
-        wildcardTargets.length > 0 || targetedAccountIds.length === 0;
-      const accounts = await simplefinClient.fetchAccounts(
-        needsAllAccounts ? undefined : { accountIds: targetedAccountIds },
-      );
+      const accounts = await fetchRelevantAccounts();
       if (!Array.isArray(accounts) || !accounts.length) {
         log.warn("SimpleFIN returned no accounts");
-        return;
+        return false;
       }
       for (const account of accounts) {
         try {
-          await handleAccount(account);
+          await processAccount(account);
         } catch (error) {
           log.error("Failed to process account", {
             accountId: account?.id,
@@ -173,37 +184,20 @@ const createBalanceScheduler = ({
           });
         }
       }
+      return true;
     } finally {
       running = false;
     }
   };
 
-  const scheduleRun = () =>
-    runOnce().catch((error) => {
-      log.error("Balance check failed", { error: error.message });
-    });
-
-  const start = () => {
-    if (task) return;
-    const schedule = config.polling.cronExpression;
-    if (!cronLib.validate(schedule)) {
-      throw new Error(`Invalid cron expression: ${schedule}`);
-    }
-    log.info("Starting balance scheduler", {
-      schedule,
-      targetCount: targets.length,
-    });
-    task = cronLib.schedule(schedule, scheduleRun);
-    scheduleRun();
+  return {
+    checkBalances,
+    isRunning: () => running,
+    targetSummary: {
+      wildcardCount: wildcardTargets.length,
+      targetedCount: targetedAccountIds.length,
+    },
   };
-
-  const stop = () => {
-    if (!task) return;
-    task.stop();
-    task = null;
-  };
-
-  return { start, stop };
 };
 
-export default createBalanceScheduler;
+export default createBalanceProcessor;

@@ -1,19 +1,20 @@
+import cron from "node-cron";
 import config from "./config.js";
 import logger from "./logger.js";
-import createSimplefinClient from "./simplefinClient.js";
+import createSimplefin from "./simplefin.js";
 import createNotifier from "./notifier.js";
-import createStateStore from "./stateStore.js";
-import createBalanceScheduler from "./balanceScheduler.js";
+import createStore from "./store.js";
+import createBalanceProcessor from "./balance.js";
 
 const main = async () => {
   logger.info("Booting balance bot");
-  const simplefinClient = createSimplefinClient(config.simplefin);
+  const simplefinClient = createSimplefin(config.simplefin);
   const notifier = createNotifier(config.notifier);
-  const stateStore = createStateStore(config.storage.stateFilePath);
-  const scheduler = createBalanceScheduler({
+  const stateStore = createStore(config.storage.stateFilePath);
+  const balance = createBalanceProcessor({
     simplefinClient,
     notifier,
-    stateStore,
+    store: stateStore,
     config,
   });
 
@@ -23,9 +24,28 @@ const main = async () => {
     );
   }
 
+  const queueCheck = () =>
+    balance.checkBalances().catch((error) => {
+      logger.error("Balance check failed", { error: error.message });
+    });
+
+  const schedule = config.polling.cronExpression;
+  if (!cron.validate(schedule)) {
+    throw new Error(`Invalid cron expression: ${schedule}`);
+  }
+
+  logger.info("Starting balance monitor", {
+    schedule,
+    targetCount: config.notifications.targets.length,
+    ...balance.targetSummary,
+  });
+
+  const task = cron.schedule(schedule, queueCheck, { scheduled: false });
+  queueCheck();
+
   const shutdown = async (signal) => {
     logger.info("Received shutdown signal", { signal });
-    scheduler.stop();
+    task.stop();
     try {
       await stateStore.save();
     } catch (error) {
@@ -45,7 +65,7 @@ const main = async () => {
     logger.error("Uncaught exception", { error: error.message });
   });
 
-  scheduler.start();
+  task.start();
 };
 
 main().catch((error) => {

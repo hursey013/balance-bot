@@ -13,3 +13,18 @@ services:
       APPRISE_API_URL: "${APPRISE_API_URL:-http://apprise:8000/notify}"
     volumes:
       - ./data:/app/data
+    depends_on:
+      - apprise
+
+  apprise:
+    image: ghcr.io/linuxserver/apprise-api:latest
+    container_name: apprise
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - ./apprise:/config
+    ports:
+      - "8000:8000"

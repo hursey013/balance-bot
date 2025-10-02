@@ -20,17 +20,25 @@ const requestJson = async ({ url, headers }) => {
   return response.json();
 };
 
+const dedupeStrings = (values) => {
+  const seen = [];
+  for (const value of values) {
+    if (!seen.includes(value)) {
+      seen.push(value);
+    }
+  }
+  return seen;
+};
+
 const createCacheKey = (accountIds) => {
   if (!Array.isArray(accountIds) || accountIds.length === 0) {
     return "accounts:all";
   }
-  const normalized = [
-    ...new Set(
-      accountIds
-        .map((id) => `${id}`.trim())
-        .filter(Boolean),
-    ),
-  ].sort();
+  const cleaned = accountIds
+    .map((id) => `${id}`.trim())
+    .filter(Boolean)
+    .sort();
+  const normalized = dedupeStrings(cleaned);
   if (!normalized.length) {
     return "accounts:all";
   }
@@ -81,7 +89,7 @@ const createCacheStore = (filePath) => {
   return { get, set };
 };
 
-const createSimplefinClient = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
+const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
   if (!accessUrl) {
     throw new Error("SimpleFIN access URL is required");
   }
@@ -122,9 +130,9 @@ const createSimplefinClient = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => 
     requestUrl.searchParams.set("balances-only", "1");
 
     if (Array.isArray(accountIds) && accountIds.length) {
-      const uniqueIds = [
-        ...new Set(accountIds.map((id) => `${id}`.trim()).filter(Boolean)),
-      ];
+      const uniqueIds = dedupeStrings(
+        accountIds.map((id) => `${id}`.trim()).filter(Boolean),
+      );
       for (const id of uniqueIds) {
         requestUrl.searchParams.append("account", id);
       }
@@ -156,4 +164,4 @@ const createSimplefinClient = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => 
   return { fetchAccounts };
 };
 
-export default createSimplefinClient;
+export default createSimplefin;
