@@ -19,7 +19,7 @@ const parseTargets = (raw) => {
 };
 
 const normalizeCacheTtl = (value) => {
-  const defaultTtl = 15 * 60 * 1000;
+  const defaultTtl = 60 * 60 * 1000;
   if (value === undefined) {
     return defaultTtl;
   }
@@ -29,7 +29,7 @@ const normalizeCacheTtl = (value) => {
 
 export const createConfig = (env = process.env) => {
   const accessUrl = trim(env.SIMPLEFIN_ACCESS_URL);
-  const cronExpression = trim(env.POLL_CRON_EXPRESSION) || "*/5 * * * *";
+  const cronExpression = trim(env.POLL_CRON_EXPRESSION) || "0 * * * *";
   const appriseApiUrl = trim(env.APPRISE_API_URL) || "http://apprise:8000/notify";
 
   const statePathRaw = trim(env.STATE_FILE_PATH);

@@ -4,7 +4,7 @@ Balance Bot is a cheerful little Node.js sidekick that watches the [SimpleFIN](h
 
 ## Why this exists
 
-USAA youth accounts hide behind the grown-up app wall. Rather than playing telephone every time a sliver of allowance moves, Balance Bot keeps watch and whispers the latest balance right away. Under the hood it:
+Youth checking accounts ofen hide behind the grown-up app wall. Rather than playing telephone every time a sliver of allowance moves, Balance Bot keeps watch and whispers the latest balance right away. Under the hood it:
 
 - Polls the SimpleFIN bridge you connect and follows one or many accounts.
 - Tracks the latest balance for each account and notices when it rises or falls.
@@ -26,13 +26,13 @@ version: "3.8"
 
 services:
   balance-bot:
-    build: .
+    image: ghcr.io/hursey013/balance-bot:latest
     container_name: balance-bot
     restart: unless-stopped
     environment:
-      SIMPLEFIN_ACCESS_URL: "https://user:secret@bridge.simplefin.org/access/..." # paste the full access link (credentials included)
-      POLL_CRON_EXPRESSION: "*/5 * * * *" # cron schedule for checking SimpleFIN (keep it chill)
-      ACCOUNT_NOTIFICATION_TARGETS: >- # JSON array describing who should receive which account updates
+      SIMPLEFIN_ACCESS_URL: "https://user:secret@bridge.simplefin.org/simplefin/..." # paste the full access link (credentials included)
+      ACCOUNT_NOTIFICATION_TARGETS:
+        >- # JSON array describing who should receive which account updates
         [
           {
             "name": "Ellie",
@@ -52,38 +52,17 @@ services:
       - apprise
 
   apprise:
-    image: ghcr.io/linuxserver/apprise-api:latest
-    container_name: apprise
-    restart: unless-stopped
+    image: lscr.io/linuxserver/apprise-api:latest
     environment:
-      - PUID=1000 # map to your host user if you care about permissions
-      - PGID=1000 # map to your host group if you care about permissions
-      - TZ=UTC # timezone for Apprise’s logs
+      PUID: "1026" # adjust to your DSM user/group if needed
+      PGID: "100"
+      TZ: "America/New_York"
     volumes:
-      - ./apprise:/config
+      - ./apprise-config:/config
+      - ./apprise-attachments:/attachments
     ports:
       - "8000:8000"
+    restart: unless-stopped
 ```
 
 Each target can point at a stateful Apprise configuration entry via `appriseConfigKey` (recommended for long-lived destinations like each kid's device bundle) or provide a list of inline `appriseUrls` for quick one-off routing. Mix and match as needed—Balance Bot will call Apprise with whichever option you supply per target.
-
-Tweak the Apprise config in `apprise/apprise.yml` (it shows up after the first launch) to add more destinations or fancy formatting. The `data/` folder sticks around between restarts so the bot remembers what it already reported.
-
-### Dev-friendly SimpleFIN caching
-
-Balance Bot keeps a tiny LowDB-backed cache of the most recent SimpleFIN response so you don't spam the API while iterating on notification formatting or other behavior. Cached data automatically expires after a short window and will be refreshed on the next poll. If you need to tweak or disable the cache entirely, there are advanced environment knobs available—but the defaults should cover most workflows.
-
-## How it works
-
-1. The SimpleFIN client fetches account data over HTTPS, letting the embedded `user:pass@` credentials in the access link provide Basic Auth automatically.
-2. Each scheduled run compares the latest balance for every account against the saved snapshot.
-3. Whenever a balance rises or falls, Balance Bot records the delta and sends an update downstream.
-4. Apprise fans that message out to the URLs configured for each kid—buzzing inboxes, phones, or wherever else you send it.
-
-### Getting the right SimpleFIN values
-
-The ["Start a connection" section of the SimpleFIN protocol](https://www.simplefin.org/protocol.html#start-a-connection) walks through generating an access link that already embeds HTTP Basic Auth credentials (e.g. `https://user:secret@beta-bridge.simplefin.org/access/...`). Copy that entire URL into `SIMPLEFIN_ACCESS_URL`—credentials and all. Balance Bot passes the URL straight to `fetch`, so the Basic Auth header is derived automatically with no extra secret variables or manual headers required.
-
-## License
-
-MIT License © 2025

@@ -10,13 +10,10 @@ test("createConfig returns defaults when env is empty", () => {
     config.simplefin.cacheFilePath,
     path.resolve("data/simplefin-cache.json"),
   );
-  assert.equal(config.simplefin.cacheTtlMs, 15 * 60 * 1000);
-  assert.equal(config.polling.cronExpression, "*/5 * * * *");
+  assert.equal(config.simplefin.cacheTtlMs, 60 * 60 * 1000);
+  assert.equal(config.polling.cronExpression, "0 * * * *");
   assert.equal(config.notifier.appriseApiUrl, "http://apprise:8000/notify");
-  assert.equal(
-    config.storage.stateFilePath,
-    path.resolve("data/state.json"),
-  );
+  assert.equal(config.storage.stateFilePath, path.resolve("data/state.json"));
   assert.deepEqual(config.notifications.targets, []);
 });
 
@@ -45,20 +42,14 @@ test("createConfig respects override values", () => {
   const config = createConfig(env);
 
   assert.equal(config.simplefin.accessUrl, "https://example.org/simplefin");
-  assert.equal(
-    config.simplefin.cacheFilePath,
-    path.resolve("tmp/cache.json"),
-  );
+  assert.equal(config.simplefin.cacheFilePath, path.resolve("tmp/cache.json"));
   assert.equal(config.simplefin.cacheTtlMs, 5000);
   assert.equal(config.polling.cronExpression, "0 * * * *");
   assert.equal(
     config.notifier.appriseApiUrl,
     "http://apprise.local:8000/notify",
   );
-  assert.equal(
-    config.storage.stateFilePath,
-    path.resolve("tmp/state.json"),
-  );
+  assert.equal(config.storage.stateFilePath, path.resolve("tmp/state.json"));
   assert.deepEqual(config.notifications.targets, [
     {
       name: "Test",
