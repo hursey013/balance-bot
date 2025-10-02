@@ -4,8 +4,9 @@ import "dotenv/config";
 const trim = (value) => value?.trim() ?? "";
 
 const parseTargets = (raw) => {
-  if (!raw) return [];
-  const parsed = JSON.parse(raw);
+  const value = trim(raw);
+  if (!value) return [];
+  const parsed = JSON.parse(value);
   if (Array.isArray(parsed)) return parsed;
   return Array.isArray(parsed?.targets) ? parsed.targets : [];
 };

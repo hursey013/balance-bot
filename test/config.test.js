@@ -62,3 +62,12 @@ test("createConfig respects override values", () => {
     },
   ]);
 });
+
+test("createConfig treats blank target env as empty array", () => {
+  const env = {
+    ACCOUNT_NOTIFICATION_TARGETS: "   ",
+  };
+
+  const config = createConfig(env);
+  assert.deepEqual(config.notifications.targets, []);
+});
