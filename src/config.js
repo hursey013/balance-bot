@@ -75,8 +75,6 @@ const rawTargets = parseJsonSource(process.env.ACCOUNT_NOTIFICATION_TARGETS);
 const config = {
   simplefin: {
     accessUrl: trimOrEmpty(process.env.SIMPLEFIN_ACCESS_URL),
-    accessSecret: trimOrEmpty(process.env.SIMPLEFIN_ACCESS_SECRET),
-    authScheme: process.env.SIMPLEFIN_AUTH_SCHEME || 'Token',
     timeoutMs: numberFromEnv(process.env.SIMPLEFIN_TIMEOUT_MS, 10000),
   },
   polling: {

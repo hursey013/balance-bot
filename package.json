@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "validate": "npm run lint:fix"
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "simplefin",

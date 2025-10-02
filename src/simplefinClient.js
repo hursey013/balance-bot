@@ -1,10 +1,10 @@
-const requestJson = async ({ url, authScheme, accessSecret, timeoutMs }) => {
+const requestJson = async ({ url, timeoutMs, headers }) => {
   const signal = AbortSignal.timeout(timeoutMs);
   try {
     const response = await fetch(url, {
       headers: {
-        Authorization: `${authScheme} ${accessSecret}`,
         Accept: 'application/json',
+        ...(headers ?? {}),
       },
       signal,
     });
@@ -21,17 +21,44 @@ const requestJson = async ({ url, authScheme, accessSecret, timeoutMs }) => {
   }
 };
 
-const createSimplefinClient = ({ accessUrl, accessSecret, authScheme = 'Token', timeoutMs = 10000 }) => {
+const createSimplefinClient = ({ accessUrl, timeoutMs = 10000 }) => {
+  if (!accessUrl) {
+    throw new Error('SimpleFIN access URL is required');
+  }
+
+  let access;
+  try {
+    access = new URL(accessUrl);
+  } catch (error) {
+    throw new Error(`Invalid SimpleFIN access URL: ${error.message}`);
+  }
+
+  const username = access.username ? decodeURIComponent(access.username) : '';
+  const password = access.password ? decodeURIComponent(access.password) : '';
+  const hasCredentials = username || password;
+  const authHeader = hasCredentials
+    ? `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    : null;
+  if (hasCredentials) {
+    access.username = '';
+    access.password = '';
+  }
+  const url = access.toString();
+
   const fetchAccounts = async () => {
     const response = await requestJson({
-      url: accessUrl,
-      authScheme,
-      accessSecret,
+      url,
       timeoutMs,
+      headers: authHeader
+        ? {
+            Authorization: authHeader,
+          }
+        : undefined,
     });
     if (!response || !Array.isArray(response.accounts)) {
       throw new Error('Unexpected SimpleFIN response: missing accounts array');
     }
+
     return response.accounts;
   };
 

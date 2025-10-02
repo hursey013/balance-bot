@@ -13,7 +13,7 @@ USAA youth accounts hide behind the grown-up app wall. Rather than playing telep
 
 ## What you’ll need
 
-- SimpleFIN bridge credentials (`accessUrl` + `secret`) from [beta-bridge.simplefin.org/info/developers](https://beta-bridge.simplefin.org/info/developers).
+- A SimpleFIN access link (looks like `https://user:pass@bridge.simplefin.org/access/...`) from [beta-bridge.simplefin.org/info/developers](https://beta-bridge.simplefin.org/info/developers). Copy the entire URL with the embedded Basic Auth credentials when you create an access.
 - At least one Apprise-friendly destination URL (Discord, Matrix, email, SMS gateways—pick your flavor).
 - A Docker host ready to run the stack below.
 
@@ -30,8 +30,7 @@ services:
     container_name: balance-bot
     restart: unless-stopped
     environment:
-      SIMPLEFIN_ACCESS_URL: "https://bridge.simplefin.org/access/..." # paste the accessUrl from the SimpleFIN bridge
-      SIMPLEFIN_ACCESS_SECRET: "replace-with-your-secret" # paste the matching secret
+      SIMPLEFIN_ACCESS_URL: "https://user:secret@bridge.simplefin.org/access/..." # paste the full access link (credentials included)
       SIMPLEFIN_TIMEOUT_MS: "10000" # API call timeout in milliseconds
       POLL_CRON_EXPRESSION: "*/5 * * * *" # cron schedule for checking SimpleFIN (keep it chill)
       ACCOUNT_NOTIFICATION_TARGETS: >- # JSON array describing who should receive which account updates
@@ -75,10 +74,14 @@ Tweak the Apprise config in `apprise/apprise.yml` (it shows up after the first l
 
 ## How it works
 
-1. The SimpleFIN client fetches account data using the `Authorization: Token <secret>` magic SimpleFIN expects.
+1. The SimpleFIN client fetches account data over HTTPS, letting the embedded `user:pass@` credentials in the access link provide Basic Auth automatically.
 2. Each scheduled run compares the latest balance for every account against the saved snapshot.
 3. Whenever a balance rises or falls, Balance Bot records the delta and sends an update downstream.
 4. Apprise fans that message out to the URLs configured for each kid—buzzing inboxes, phones, or wherever else you send it.
+
+### Getting the right SimpleFIN values
+
+The ["Start a connection" section of the SimpleFIN protocol](https://www.simplefin.org/protocol.html#start-a-connection) walks through generating an access link that already embeds HTTP Basic Auth credentials (e.g. `https://user:secret@beta-bridge.simplefin.org/access/...`). Copy that entire URL into `SIMPLEFIN_ACCESS_URL`—credentials and all. Balance Bot passes the URL straight to `fetch`, so the Basic Auth header is derived automatically with no extra secret variables or manual headers required.
 
 ## License
 
