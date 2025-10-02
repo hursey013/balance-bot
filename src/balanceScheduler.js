@@ -8,7 +8,7 @@ const formatCurrency = (amount, currency = 'USD') => {
   }
   try {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(numeric);
-  } catch (error) {
+  } catch {
     return `${numeric.toFixed(2)} ${currency}`;
   }
 };
