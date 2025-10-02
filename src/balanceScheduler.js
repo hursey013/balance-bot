@@ -44,7 +44,10 @@ const createBalanceScheduler = ({
   notifier,
   stateStore,
   config,
+  cronLib = cron,
+  logger: loggerLib = logger,
 }) => {
+  const log = loggerLib;
   const targets = config.notifications.targets || [];
   const wildcardTargets = targets.filter((target) =>
     target.accountIds.includes("*"),
@@ -72,7 +75,7 @@ const createBalanceScheduler = ({
 
   const handleAccount = async (account) => {
     if (!account || !account.id) {
-      logger.warn("Skipping account without id");
+      log.warn("Skipping account without id");
       return;
     }
 
@@ -83,7 +86,7 @@ const createBalanceScheduler = ({
 
     const balanceInfo = resolveBalanceInfo(account);
     if (!balanceInfo) {
-      logger.warn("Could not resolve account balance", {
+      log.warn("Could not resolve account balance", {
         accountId: account.id,
       });
       return;
@@ -94,7 +97,7 @@ const createBalanceScheduler = ({
 
     if (previousBalance === null) {
       await stateStore.setLastBalance(account.id, currentBalance);
-      logger.info("Stored baseline balance", {
+      log.info("Stored baseline balance", {
         accountId: account.id,
         accountName: account.name || account.id,
         balance: currentBalance,
@@ -130,7 +133,7 @@ const createBalanceScheduler = ({
         configKey: target.appriseConfigKey,
       });
 
-      logger.info("Sent balance update", {
+      log.info("Sent balance update", {
         accountId: account.id,
         accountName,
         delta,
@@ -144,7 +147,7 @@ const createBalanceScheduler = ({
 
   const runOnce = async () => {
     if (running) {
-      logger.warn(
+      log.warn(
         "Skipping balance check because the previous run is still running",
       );
       return;
@@ -157,14 +160,14 @@ const createBalanceScheduler = ({
         needsAllAccounts ? undefined : { accountIds: targetedAccountIds },
       );
       if (!Array.isArray(accounts) || !accounts.length) {
-        logger.warn("SimpleFIN returned no accounts");
+        log.warn("SimpleFIN returned no accounts");
         return;
       }
       for (const account of accounts) {
         try {
           await handleAccount(account);
         } catch (error) {
-          logger.error("Failed to process account", {
+          log.error("Failed to process account", {
             accountId: account?.id,
             error: error.message,
           });
@@ -177,20 +180,20 @@ const createBalanceScheduler = ({
 
   const scheduleRun = () =>
     runOnce().catch((error) => {
-      logger.error("Balance check failed", { error: error.message });
+      log.error("Balance check failed", { error: error.message });
     });
 
   const start = () => {
     if (task) return;
     const schedule = config.polling.cronExpression;
-    if (!cron.validate(schedule)) {
+    if (!cronLib.validate(schedule)) {
       throw new Error(`Invalid cron expression: ${schedule}`);
     }
-    logger.info("Starting balance scheduler", {
+    log.info("Starting balance scheduler", {
       schedule,
       targetCount: targets.length,
     });
-    task = cron.schedule(schedule, scheduleRun);
+    task = cronLib.schedule(schedule, scheduleRun);
     scheduleRun();
   };
 

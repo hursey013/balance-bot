@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   balance-bot:
@@ -8,26 +8,8 @@ services:
     env_file: .env
     environment:
       SIMPLEFIN_ACCESS_URL: "${SIMPLEFIN_ACCESS_URL}"
-      SIMPLEFIN_TIMEOUT_MS: "${SIMPLEFIN_TIMEOUT_MS:-10000}"
       POLL_CRON_EXPRESSION: "${POLL_CRON_EXPRESSION:-*/5 * * * *}"
       ACCOUNT_NOTIFICATION_TARGETS: "${ACCOUNT_NOTIFICATION_TARGETS:-}"
       APPRISE_API_URL: "${APPRISE_API_URL:-http://apprise:8000/notify}"
-      APPRISE_TIMEOUT_MS: "${APPRISE_TIMEOUT_MS:-10000}"
-      STATE_FILE_PATH: "${STATE_FILE_PATH:-/app/data/state.json}"
     volumes:
       - ./data:/app/data
-    depends_on:
-      - apprise
-
-  apprise:
-    image: ghcr.io/linuxserver/apprise-api:latest
-    container_name: apprise
-    restart: unless-stopped
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-    volumes:
-      - ./apprise:/config
-    ports:
-      - "8000:8000"

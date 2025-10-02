@@ -48,7 +48,6 @@ services:
           }
         ]
       APPRISE_API_URL: "http://apprise:8000/notify" # URL where Apprise listens inside the stack
-      STATE_FILE_PATH: "/app/data/state.json" # where the bot tracks its last-seen balances
     volumes:
       - ./data:/app/data
     depends_on:
@@ -69,6 +68,10 @@ services:
 ```
 
 Tweak the Apprise config in `apprise/apprise.yml` (it shows up after the first launch) to add more destinations or fancy formatting. The `data/` folder sticks around between restarts so the bot remembers what it already reported.
+
+### Dev-friendly SimpleFIN caching
+
+Balance Bot keeps a tiny LowDB-backed cache of the most recent SimpleFIN response so you don't spam the API while iterating on notification formatting or other behavior. Cached data automatically expires after a short window and will be refreshed on the next poll. If you need to tweak or disable the cache entirely, there are advanced environment knobs available—but the defaults should cover most workflows.
 
 ## How it works
 

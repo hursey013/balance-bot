@@ -1,9 +1,4 @@
-const postNotification = async ({
-  appriseApiUrl,
-  urls,
-  title,
-  body,
-}) => {
+const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   const payload = {
     title,
     body,
