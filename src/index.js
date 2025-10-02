@@ -12,6 +12,10 @@ const main = async () => {
   const stateStore = createStateStore(config.storage.stateFilePath);
   const scheduler = createBalanceScheduler({ simplefinClient, notifier, stateStore, config });
 
+  if (!config.notifications.targets.length) {
+    logger.warn('No notification targets configured. Balance changes will not be sent anywhere.');
+  }
+
   const shutdown = async (signal) => {
     logger.info('Received shutdown signal', { signal });
     scheduler.stop();

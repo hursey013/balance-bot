@@ -24,34 +24,23 @@ const createStateStore = (filePath) => {
     return db;
   };
 
-  const load = async () => {
-    const database = await ensureDb();
-    return database.data;
-  };
-
   const save = async () => {
     const database = await ensureDb();
     await database.write();
   };
 
-  const getAccountState = async (accountId) => {
+  const getLastBalance = async (accountId) => {
     const database = await ensureDb();
-    const { accounts } = database.data;
-    if (!accounts[accountId]) {
-      accounts[accountId] = {};
-    }
-    return accounts[accountId];
+    return database.data.accounts[accountId]?.lastBalance ?? null;
   };
 
-  const updateAccountState = async (accountId, updates) => {
+  const setLastBalance = async (accountId, balance) => {
     const database = await ensureDb();
-    const { accounts } = database.data;
-    const current = accounts[accountId] ?? {};
-    accounts[accountId] = { ...current, ...updates };
+    database.data.accounts[accountId] = { lastBalance: balance };
     await database.write();
   };
 
-  return { load, save, getAccountState, updateAccountState };
+  return { save, getLastBalance, setLastBalance };
 };
 
 export default createStateStore;

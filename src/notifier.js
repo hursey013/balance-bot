@@ -1,14 +1,6 @@
-const normalizeUrls = (raw) => {
-  if (!raw) return [];
-  return raw
-    .split(/[\n,]/)
-    .map((value) => value.trim())
-    .filter(Boolean);
-};
-
 const postNotification = async ({
   appriseApiUrl,
-  appriseUrls,
+  urls,
   requestTimeoutMs,
   title,
   body,
@@ -19,7 +11,7 @@ const postNotification = async ({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        urls: appriseUrls,
+        urls,
         title,
         body,
         format: 'markdown',
@@ -38,16 +30,15 @@ const postNotification = async ({
   }
 };
 
-const createNotifier = ({ appriseApiUrl, appriseUrls, requestTimeoutMs = 10000 }) => {
-  const urls = normalizeUrls(appriseUrls);
-
-  const sendNotification = async ({ title, body }) => {
-    if (!urls.length) {
-      throw new Error('No Apprise URLs configured. Provide APPRISE_NOTIFICATION_URLS.');
+const createNotifier = ({ appriseApiUrl, requestTimeoutMs = 10000 }) => {
+  const sendNotification = async ({ title, body, urls }) => {
+    const targets = Array.isArray(urls) ? urls.filter(Boolean) : [];
+    if (!targets.length) {
+      throw new Error('No Apprise URLs provided for notification.');
     }
     await postNotification({
       appriseApiUrl,
-      appriseUrls: urls,
+      urls: targets,
       requestTimeoutMs,
       title,
       body,
