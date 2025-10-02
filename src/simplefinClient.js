@@ -12,6 +12,7 @@ const requestJson = async ({ url, timeoutMs, headers }) => {
       const body = await response.text();
       throw new Error(`SimpleFIN request failed with status ${response.status}: ${body}`);
     }
+
     return response.json();
   } catch (error) {
     if (error.name === 'AbortError') {
@@ -43,11 +44,21 @@ const createSimplefinClient = ({ accessUrl, timeoutMs = 10000 }) => {
     access.username = '';
     access.password = '';
   }
-  const url = access.toString();
+  const baseUrl = access.toString();
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = async ({ accountIds } = {}) => {
+    const requestUrl = new URL(baseUrl);
+    requestUrl.searchParams.set('balances-only', '1');
+
+    if (Array.isArray(accountIds) && accountIds.length) {
+      const uniqueIds = [...new Set(accountIds.map((id) => `${id}`.trim()).filter(Boolean))];
+      for (const id of uniqueIds) {
+        requestUrl.searchParams.append('account', id);
+      }
+    }
+
     const response = await requestJson({
-      url,
+      url: requestUrl.toString(),
       timeoutMs,
       headers: authHeader
         ? {

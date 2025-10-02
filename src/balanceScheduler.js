@@ -56,6 +56,8 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
     }
   }
 
+  const targetedAccountIds = [...accountTargets.keys()];
+
   const selectTargets = (accountId) => {
     const specific = accountTargets.get(accountId) ?? [];
     return [...new Set([...specific, ...wildcardTargets])];
@@ -140,7 +142,10 @@ const createBalanceScheduler = ({ simplefinClient, notifier, stateStore, config 
     }
     running = true;
     try {
-      const accounts = await simplefinClient.fetchAccounts();
+      const needsAllAccounts = wildcardTargets.length > 0 || targetedAccountIds.length === 0;
+      const accounts = await simplefinClient.fetchAccounts(
+        needsAllAccounts ? undefined : { accountIds: targetedAccountIds },
+      );
       if (!Array.isArray(accounts) || !accounts.length) {
         logger.warn('SimpleFIN returned no accounts');
         return;
