@@ -6,7 +6,14 @@ const trim = (value) => value?.trim() ?? "";
 const parseTargets = (raw) => {
   const value = trim(raw);
   if (!value) return [];
-  const parsed = JSON.parse(value);
+  let parsed;
+  try {
+    parsed = JSON.parse(value);
+  } catch (error) {
+    throw new Error(
+      `ACCOUNT_NOTIFICATION_TARGETS must be valid JSON: ${error.message}`,
+    );
+  }
   if (Array.isArray(parsed)) return parsed;
   return Array.isArray(parsed?.targets) ? parsed.targets : [];
 };
