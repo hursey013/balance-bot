@@ -82,6 +82,11 @@ const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     access.username = "";
     access.password = "";
   }
+  if (!access.pathname.endsWith("/accounts")) {
+    const trimmedPath = access.pathname.replace(/\/$/, "");
+    access.pathname = `${trimmedPath}/accounts`;
+  }
+
   const baseUrl = access.toString();
 
   const cache = cacheTtlMs > 0 ? createCacheStore(cacheFilePath) : null;

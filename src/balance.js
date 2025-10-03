@@ -80,12 +80,13 @@ const createBalanceProcessor = ({
     const formattedDelta = formatCurrency(Math.abs(delta), currency);
     const signedDelta = `${delta > 0 ? "+" : "-"}${formattedDelta}`;
     const deltaColor = delta > 0 ? "#007700" : "#B00000";
+    const trendEmoji = delta > 0 ? "📈" : "📉";
 
     for (const target of matchedTargets) {
       const body = [
-        `Account: <b>${accountName}</b>`,
-        `Change: <font color="${deltaColor}">${signedDelta}</font>`,
-        `New balance: <b>${formattedBalance}</b>`,
+        `Account: <b>👤 ${accountName}</b>`,
+        `Change: ${trendEmoji} <font color="${deltaColor}">${signedDelta}</font>`,
+        `New balance: <b>💰 ${formattedBalance}</b>`,
       ].join("<br>");
 
       await notifier.sendNotification({

@@ -111,10 +111,42 @@ test("SimpleFIN client includes Basic Auth credentials", async (t) => {
   await client.fetchAccounts();
 
   assert(lastRequest);
+  assert(lastRequest.url.includes('/access/accounts?'));
   assert.equal(
     lastRequest.options.headers.Authorization,
     `Basic ${Buffer.from("name:secret").toString("base64")}`,
   );
+});
+
+test("SimpleFIN client does not double-append accounts path", async (t) => {
+  const tempDir = await withTempDir(t);
+  const cachePath = path.join(tempDir, "cache.json");
+  const originalFetch = global.fetch;
+  t.after(() => {
+    if (originalFetch) {
+      global.fetch = originalFetch;
+    } else {
+      delete global.fetch;
+    }
+  });
+
+  let calledUrl;
+  global.fetch = async (url) => {
+    calledUrl = url;
+    return { ok: true, json: async () => ({ accounts: [] }) };
+  };
+
+  const client = createSimplefin({
+    accessUrl: "https://user:pass@bridge.simplefin.org/simplefin/accounts",
+    cacheFilePath: cachePath,
+    cacheTtlMs: 0,
+  });
+
+  await client.fetchAccounts();
+
+  assert(calledUrl);
+  const url = new URL(calledUrl);
+  assert.equal(url.pathname.endsWith("/accounts"), true);
 });
 
 test("SimpleFIN client throws when SimpleFIN responds without accounts", async (t) => {
