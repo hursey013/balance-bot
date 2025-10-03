@@ -1,10 +1,5 @@
 import logger from "./logger.js";
-import {
-  parseNumeric,
-  resolveBalanceInfo,
-  formatCurrency,
-  uniqueEntries,
-} from "./utils.js";
+import { resolveBalanceInfo, formatCurrency, uniqueEntries } from "./utils.js";
 
 const createBalanceProcessor = ({
   simplefinClient,
@@ -14,27 +9,29 @@ const createBalanceProcessor = ({
   logger: loggerLib = logger,
 }) => {
   const log = loggerLib;
-  const targets = config.notifications.targets || [];
-  const wildcardTargets = targets.filter((target) =>
-    target.accountIds.includes("*"),
+  const targets = Array.isArray(config.notifications.targets)
+    ? config.notifications.targets
+    : [];
+
+  const allAccountIds = targets.flatMap((target) =>
+    Array.isArray(target.accountIds) ? target.accountIds : [],
   );
-  const accountTargets = new Map();
+  const wildcardTargetCount = targets.filter((target) =>
+    Array.isArray(target.accountIds) ? target.accountIds.includes("*") : false,
+  ).length;
 
-  for (const target of targets) {
-    for (const accountId of target.accountIds) {
-      if (accountId === "*") continue;
-      const list = accountTargets.get(accountId) ?? [];
-      list.push(target);
-      accountTargets.set(accountId, list);
-    }
-  }
+  const explicitAccountIds = uniqueEntries(
+    allAccountIds.filter((id) => id && id !== "*"),
+  );
+  const hasWildcardTargets = allAccountIds.includes("*");
 
-  const targetedAccountIds = [...accountTargets.keys()];
-
-  const selectTargets = (accountId) => {
-    const specific = accountTargets.get(accountId) ?? [];
-    return uniqueEntries([...specific, ...wildcardTargets]);
-  };
+  const selectTargets = (accountId) =>
+    targets.filter((target) => {
+      if (!Array.isArray(target.accountIds)) return false;
+      return (
+        target.accountIds.includes(accountId) || target.accountIds.includes("*")
+      );
+    });
 
   let running = false;
 
@@ -112,9 +109,9 @@ const createBalanceProcessor = ({
 
   const fetchRelevantAccounts = async () => {
     const needsAllAccounts =
-      wildcardTargets.length > 0 || targetedAccountIds.length === 0;
+      hasWildcardTargets || explicitAccountIds.length === 0;
     return simplefinClient.fetchAccounts(
-      needsAllAccounts ? undefined : { accountIds: targetedAccountIds },
+      needsAllAccounts ? undefined : { accountIds: explicitAccountIds },
     );
   };
 
@@ -152,8 +149,8 @@ const createBalanceProcessor = ({
     checkBalances,
     isRunning: () => running,
     targetSummary: {
-      wildcardCount: wildcardTargets.length,
-      targetedCount: targetedAccountIds.length,
+      wildcardCount: wildcardTargetCount,
+      targetedCount: explicitAccountIds.length,
     },
   };
 };

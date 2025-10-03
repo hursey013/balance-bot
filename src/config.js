@@ -20,7 +20,8 @@ const parseTargets = (raw) => {
 export const createConfig = (env = process.env) => {
   const accessUrl = trim(env.SIMPLEFIN_ACCESS_URL);
   const cronExpression = trim(env.POLL_CRON_EXPRESSION) || "0 * * * *";
-  const appriseApiUrl = trim(env.APPRISE_API_URL) || "http://apprise:8000/notify";
+  const appriseApiUrl =
+    trim(env.APPRISE_API_URL) || "http://apprise:8000/notify";
 
   const statePathRaw = trim(env.STATE_FILE_PATH);
   const stateFilePath = statePathRaw
@@ -34,7 +35,41 @@ export const createConfig = (env = process.env) => {
 
   const cacheTtlMs = normalizeCacheTtl(env.SIMPLEFIN_CACHE_TTL_MS);
 
-  const targets = parseTargets(env.ACCOUNT_NOTIFICATION_TARGETS);
+  const targets = parseTargets(env.ACCOUNT_NOTIFICATION_TARGETS).map(
+    (target) => {
+      const accountIds = Array.isArray(target.accountIds)
+        ? target.accountIds.map((id) => trim(id)).filter(Boolean)
+        : [];
+      const appriseUrls = Array.isArray(target.appriseUrls)
+        ? target.appriseUrls.map((url) => trim(url)).filter(Boolean)
+        : [];
+      const appriseConfigKey = target.appriseConfigKey
+        ? trim(target.appriseConfigKey)
+        : "";
+      const name =
+        typeof target.name === "string" ? target.name.trim() : target.name;
+
+      const sanitized = {
+        ...target,
+        name,
+        accountIds,
+      };
+
+      if (appriseUrls.length) {
+        sanitized.appriseUrls = appriseUrls;
+      } else {
+        delete sanitized.appriseUrls;
+      }
+
+      if (appriseConfigKey) {
+        sanitized.appriseConfigKey = appriseConfigKey;
+      } else {
+        delete sanitized.appriseConfigKey;
+      }
+
+      return sanitized;
+    },
+  );
 
   return {
     simplefin: {

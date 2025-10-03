@@ -2,21 +2,18 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
-import { uniqueEntries, requestJson } from "./utils.js";
+import { requestJson, uniqueEntries } from "./utils.js";
 
 const createCacheKey = (accountIds) => {
   if (!Array.isArray(accountIds) || accountIds.length === 0) {
     return "accounts:all";
   }
-  const cleaned = accountIds
-    .map((id) => `${id}`.trim())
-    .filter(Boolean)
-    .sort();
-  const normalized = uniqueEntries(cleaned);
-  if (!normalized.length) {
+  const cleanedIds = accountIds.map((id) => `${id}`.trim()).filter(Boolean);
+  const uniqueSortedIds = uniqueEntries(cleanedIds).sort();
+  if (!uniqueSortedIds.length) {
     return "accounts:all";
   }
-  return `accounts:${normalized.join(",")}`;
+  return `accounts:${uniqueSortedIds.join(",")}`;
 };
 
 const createCacheStore = (filePath) => {

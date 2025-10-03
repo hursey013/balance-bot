@@ -6,10 +6,7 @@ import { createConfig } from "../src/config.js";
 test("createConfig returns defaults when env is empty", () => {
   const config = createConfig({});
   assert.equal(config.simplefin.accessUrl, "");
-  assert.equal(
-    config.simplefin.cacheFilePath,
-    path.resolve("data/cache.json"),
-  );
+  assert.equal(config.simplefin.cacheFilePath, path.resolve("data/cache.json"));
   assert.equal(config.simplefin.cacheTtlMs, 60 * 60 * 1000);
   assert.equal(config.polling.cronExpression, "0 * * * *");
   assert.equal(config.notifier.appriseApiUrl, "http://apprise:8000/notify");
@@ -71,4 +68,27 @@ test("createConfig treats blank target env as empty array", () => {
 
   const config = createConfig(env);
   assert.deepEqual(config.notifications.targets, []);
+});
+
+test("createConfig trims target fields and discards blanks", () => {
+  const env = {
+    ACCOUNT_NOTIFICATION_TARGETS: JSON.stringify([
+      {
+        name: " Elliot ",
+        accountIds: [" acct-1 ", ""],
+        appriseUrls: [" http://example.com ", null],
+        appriseConfigKey: " kids ",
+      },
+    ]),
+  };
+
+  const config = createConfig(env);
+  assert.deepEqual(config.notifications.targets, [
+    {
+      name: "Elliot",
+      accountIds: ["acct-1"],
+      appriseUrls: ["http://example.com"],
+      appriseConfigKey: "kids",
+    },
+  ]);
 });

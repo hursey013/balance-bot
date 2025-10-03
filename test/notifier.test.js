@@ -18,7 +18,9 @@ test("notifier posts notifications with supplied URLs", async (t) => {
     }
   });
 
-  const notifier = createNotifier({ appriseApiUrl: "http://apprise:8000/notify" });
+  const notifier = createNotifier({
+    appriseApiUrl: "http://apprise:8000/notify",
+  });
 
   await notifier.sendNotification({
     title: "Balance update",
@@ -64,8 +66,10 @@ test("notifier targets config keys without duplicating URLs", async (t) => {
   assert.equal(payload.urls, undefined);
 });
 
-test("notifier rejects when no destinations are provided", async (t) => {
-  const notifier = createNotifier({ appriseApiUrl: "http://apprise:8000/notify" });
+test("notifier rejects when no destinations are provided", async () => {
+  const notifier = createNotifier({
+    appriseApiUrl: "http://apprise:8000/notify",
+  });
   await assert.rejects(
     () => notifier.sendNotification({ title: "Missing", body: "Body" }),
     /No Apprise destination provided/i,

@@ -6,7 +6,10 @@ const normalizeCacheTtl = (value) => {
     return defaultTtl;
   }
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : defaultTtl;
+  if (!Number.isFinite(parsed)) {
+    return defaultTtl;
+  }
+  return Math.max(0, parsed);
 };
 
 const parseNumeric = (value) => {
@@ -57,7 +60,7 @@ const uniqueEntries = (items) => {
   return result;
 };
 
-const trimTrailingSlash = (value) => value.replace(/\/+$/, "");
+const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 
 const requestJson = async ({ url, headers, errorContext }) => {
   const response = await fetch(url, {

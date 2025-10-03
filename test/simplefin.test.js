@@ -137,10 +137,7 @@ test("SimpleFIN client throws when SimpleFIN responds without accounts", async (
     cacheTtlMs: 0,
   });
 
-  await assert.rejects(
-    () => client.fetchAccounts(),
-    /missing accounts array/i,
-  );
+  await assert.rejects(() => client.fetchAccounts(), /missing accounts array/i);
 });
 
 test("SimpleFIN client surfaces HTTP failures", async (t) => {
