@@ -8,8 +8,7 @@ Balance Bot is a friendly little Node.js helper that keeps an eye on the [Simple
 - 💾 Reuse SimpleFIN responses for a bit so you stay well within bridge rate limits while keeping updates feeling fresh.
 - 📣 Send colorful, emoji-packed notifications through any Apprise destination that works for your family chat or smart display.
 
-Here’s the kind of alert the bot sends:
-
+#### Here’s the kind of alert the bot sends:
 ```
 Title: Balance update
 
