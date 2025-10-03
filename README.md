@@ -1,13 +1,22 @@
 # Balance Bot
 
-Balance Bot is a cheerful Node.js sidekick that watches the [SimpleFIN](https://www.simplefin.org/protocol.html) bridge for balance changes and pings [Apprise](https://github.com/caronc/apprise) as soon as money moves. Drop it on your homelab, forget about copy-pasting numbers, and let the bot deliver the good (or "please stop buying snacks") news.
+Balance Bot is a cheerful Node.js sidekick that watches the [SimpleFIN](https://www.simplefin.org/protocol.html) bridge for balance changes and pings [Apprise](https://github.com/caronc/apprise) as soon as money moves—perfect for families where kids under 13 can’t use the bank’s app, but still want real-time allowance updates without parents playing middleman.
 
 ## Features
 
-- 👨‍👩‍👧 Route updates to multiple family members with per-account or wildcard targets.
-- 💾 Cache SimpleFIN responses between polls to stay friendly with rate limits.
-- 📣 Send emoji-rich, HTML-formatted balance alerts through any Apprise destination.
-- 🔌 Drop-in Docker Compose support plus straightforward `.env` configuration for bare Node.
+👨‍👩‍👧 Route updates to multiple family members with per-account or wildcard targets.
+💾 Cache SimpleFIN responses between polls to stay friendly with rate limits.
+📣 Send emoji-rich, HTML-formatted balance alerts through any Apprise destination.
+
+### Example Notification
+
+```
+Title: Balance update
+
+👤 Elliot - Checking
+📉 -$12.34
+💰 $87.66
+```
 
 ## Prerequisites
 
@@ -63,16 +72,6 @@ services:
 ```
 
 Each target can point at a stateful Apprise configuration entry via `appriseConfigKey` (recommended for long-lived destinations like each kid's device bundle) or provide a list of inline `appriseUrls` for quick one-off routing. Mix and match as needed—Balance Bot will call Apprise with whichever option you supply per target. Use `"*"` in `accountIds` when a notification should be sent for every account.
-
-### Example Notification
-
-```
-Title: Balance update
-
-Account: 👤 Elliot
-Change: 📉 -$12.34
-New balance: 💰 $87.66
-```
 
 ## Configuration Reference
 

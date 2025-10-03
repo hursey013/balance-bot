@@ -87,10 +87,9 @@ test("balance processor notifies when balances change", async () => {
   assert.equal(sentNotifications.length, 1);
   const [notification] = sentNotifications;
   assert.equal(notification.title, "Balance update");
-  assert(
-    notification.body.includes('<font color="#007700">') ||
-      notification.body.includes('<font color="#B00000">'),
-  );
+  assert(notification.body.includes("👤 Primary"));
+  assert(notification.body.includes("📈 <font color=\"#007700\">"));
+  assert(notification.body.includes("💰 $150.50"));
   assert.equal(balances.get("acct-1"), 150.5);
 
   assert.equal(balance.isRunning(), false);

@@ -84,9 +84,9 @@ const createBalanceProcessor = ({
 
     for (const target of matchedTargets) {
       const body = [
-        `Account: <b>👤 ${accountName}</b>`,
-        `Change: ${trendEmoji} <font color="${deltaColor}">${signedDelta}</font>`,
-        `New balance: <b>💰 ${formattedBalance}</b>`,
+        `👤 ${accountName}`,
+        `${trendEmoji} <font color="${deltaColor}">${signedDelta}</font>`,
+        `💰 ${formattedBalance}`,
       ].join("<br>");
 
       await notifier.sendNotification({
