@@ -1,4 +1,20 @@
-# Balance Bot
+<p align="center">
+  <picture>
+    <img alt="Balance Bot logo" src="balance-bot-logo.svg" width="160" height="160">
+  </picture>
+</p>
+
+<h1 align="center">Balance Bot</h1>
+
+<p align="center">
+  Your cheerful SimpleFIN lookout—spotting every allowance drop or snack attack and launching emoji-filled Apprise alerts before the kids can say “cha-ching!”
+</p>
+
+<p align="center">
+  <a href="https://github.com/hursey013/balance-bot/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hursey013/balance-bot/ci.yml?label=CI&logo=github"></a>
+  <a href="https://github.com/hursey013/balance-bot/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-0EA5E9"></a>
+  <a href="https://ghcr.io/hursey013/balance-bot"><img alt="Image" src="https://img.shields.io/badge/ghcr-image-blue"></a>
+</p>
 
 Balance Bot is a friendly little Node.js helper that keeps an eye on the [SimpleFIN](https://beta-bridge.simplefin.org) bridge and nudges [Apprise](https://github.com/caronc/apprise) whenever money moves. It was built for families with kids who are too young for the bank’s app but still want to know when allowance hits—or when snack money disappears—without Mom or Dad relaying every single update.
 
@@ -9,6 +25,7 @@ Balance Bot is a friendly little Node.js helper that keeps an eye on the [Simple
 - 📣 Send colorful, emoji-packed notifications through any Apprise destination that works for your family chat or smart display.
 
 #### Here’s the kind of alert the bot sends:
+
 ```
 Title: Balance update
 
