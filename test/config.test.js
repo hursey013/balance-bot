@@ -8,7 +8,7 @@ test("createConfig returns defaults when env is empty", () => {
   assert.equal(config.simplefin.accessUrl, "");
   assert.equal(
     config.simplefin.cacheFilePath,
-    path.resolve("data/simplefin-cache.json"),
+    path.resolve("data/cache.json"),
   );
   assert.equal(config.simplefin.cacheTtlMs, 60 * 60 * 1000);
   assert.equal(config.polling.cronExpression, "0 * * * *");

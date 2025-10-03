@@ -1,7 +1,6 @@
 import path from "node:path";
 import "dotenv/config";
-
-const trim = (value) => value?.trim() ?? "";
+import { trim, normalizeCacheTtl } from "./utils.js";
 
 const parseTargets = (raw) => {
   const value = trim(raw);
@@ -18,15 +17,6 @@ const parseTargets = (raw) => {
   return Array.isArray(parsed?.targets) ? parsed.targets : [];
 };
 
-const normalizeCacheTtl = (value) => {
-  const defaultTtl = 60 * 60 * 1000;
-  if (value === undefined) {
-    return defaultTtl;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : defaultTtl;
-};
-
 export const createConfig = (env = process.env) => {
   const accessUrl = trim(env.SIMPLEFIN_ACCESS_URL);
   const cronExpression = trim(env.POLL_CRON_EXPRESSION) || "0 * * * *";
@@ -40,7 +30,7 @@ export const createConfig = (env = process.env) => {
   const cachePathRaw = trim(env.SIMPLEFIN_CACHE_PATH);
   const cacheFilePath = cachePathRaw
     ? path.resolve(cachePathRaw)
-    : path.resolve("data/simplefin-cache.json");
+    : path.resolve("data/cache.json");
 
   const cacheTtlMs = normalizeCacheTtl(env.SIMPLEFIN_CACHE_TTL_MS);
 

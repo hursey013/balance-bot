@@ -1,52 +1,10 @@
 import logger from "./logger.js";
-
-const parseNumeric = (value) => {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
-
-const resolveBalanceInfo = (account) => {
-  if (!account) return null;
-
-  const availableAmount = parseNumeric(account["available-balance"]);
-  const balanceAmount = parseNumeric(account.balance);
-  const amount = availableAmount ?? balanceAmount;
-
-  if (amount === null) {
-    return null;
-  }
-
-  const currency = account.currency || "USD";
-  return { amount, currency };
-};
-
-const formatCurrency = (amount, currency) => {
-  if (!Number.isFinite(amount)) {
-    return `${amount ?? "0"} ${currency}`;
-  }
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-    }).format(amount);
-  } catch {
-    return `${amount.toFixed(2)} ${currency}`;
-  }
-};
-
-const uniqueEntries = (items) => {
-  const result = [];
-  for (const item of items) {
-    if (!result.includes(item)) {
-      result.push(item);
-    }
-  }
-  return result;
-};
+import {
+  parseNumeric,
+  resolveBalanceInfo,
+  formatCurrency,
+  uniqueEntries,
+} from "./utils.js";
 
 const createBalanceProcessor = ({
   simplefinClient,

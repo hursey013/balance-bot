@@ -2,33 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
-
-const requestJson = async ({ url, headers }) => {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      ...(headers ?? {}),
-    },
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `SimpleFIN request failed with status ${response.status}: ${body}`,
-    );
-  }
-
-  return response.json();
-};
-
-const dedupeStrings = (values) => {
-  const seen = [];
-  for (const value of values) {
-    if (!seen.includes(value)) {
-      seen.push(value);
-    }
-  }
-  return seen;
-};
+import { uniqueEntries, requestJson } from "./utils.js";
 
 const createCacheKey = (accountIds) => {
   if (!Array.isArray(accountIds) || accountIds.length === 0) {
@@ -38,7 +12,7 @@ const createCacheKey = (accountIds) => {
     .map((id) => `${id}`.trim())
     .filter(Boolean)
     .sort();
-  const normalized = dedupeStrings(cleaned);
+  const normalized = uniqueEntries(cleaned);
   if (!normalized.length) {
     return "accounts:all";
   }
@@ -130,7 +104,7 @@ const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     requestUrl.searchParams.set("balances-only", "1");
 
     if (Array.isArray(accountIds) && accountIds.length) {
-      const uniqueIds = dedupeStrings(
+      const uniqueIds = uniqueEntries(
         accountIds.map((id) => `${id}`.trim()).filter(Boolean),
       );
       for (const id of uniqueIds) {
@@ -151,6 +125,7 @@ const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
             Authorization: authHeader,
           }
         : undefined,
+      errorContext: "SimpleFIN request",
     });
     if (!response || !Array.isArray(response.accounts)) {
       throw new Error("Unexpected SimpleFIN response: missing accounts array");

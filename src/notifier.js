@@ -1,3 +1,5 @@
+import { trimTrailingSlash } from "./utils.js";
+
 const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   const payload = {
     title,
@@ -21,8 +23,6 @@ const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
     );
   }
 };
-
-const trimTrailingSlash = (value) => value.replace(/\/+$/, "");
 
 const createNotifier = ({ appriseApiUrl }) => {
   if (!appriseApiUrl) {
