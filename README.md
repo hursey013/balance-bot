@@ -1,14 +1,14 @@
 # Balance Bot
 
-Balance Bot is a cheerful Node.js sidekick that watches the [SimpleFIN](https://www.simplefin.org/protocol.html) bridge for balance changes and pings [Apprise](https://github.com/caronc/apprise) as soon as money moves—perfect for families where kids under 13 can’t use the bank’s app, but still want real-time allowance updates without parents playing middleman.
+Balance Bot is a friendly little Node.js helper that keeps an eye on the [SimpleFIN](https://beta-bridge.simplefin.org) bridge and nudges [Apprise](https://github.com/caronc/apprise) whenever money moves. It was built for families with kids who are too young for the bank’s app but still want to know when allowance hits—or when snack money disappears—without Mom or Dad relaying every single update.
 
 ## Features
 
-- 👨‍👩‍👧 Route updates to multiple family members with per-account or wildcard targets.
-- 💾 Cache SimpleFIN responses between polls to stay friendly with rate limits.
-- 📣 Send emoji-rich, HTML-formatted balance alerts through any Apprise destination.
+- 👨‍👩‍👧 Share balance changes with everyone who needs to know, whether that’s one kid’s account or the whole crew via the wildcard `*` target.
+- 💾 Reuse SimpleFIN responses for a bit so you stay well within bridge rate limits while keeping updates feeling fresh.
+- 📣 Send colorful, emoji-packed notifications through any Apprise destination that works for your family chat or smart display.
 
-### Example Notification
+Here’s the kind of alert the bot sends:
 
 ```
 Title: Balance update
@@ -20,9 +20,9 @@ Title: Balance update
 
 ## Prerequisites
 
-- A SimpleFIN access link (looks like `https://user:pass@bridge.simplefin.org/simplefin`) from [beta-bridge.simplefin.org/info/developers](https://beta-bridge.simplefin.org/info/developers). Copy the entire URL with the embedded Basic Auth credentials when you create an access.
-- At least one Apprise-friendly destination URL (Discord, Matrix, email, SMS gateways—pick your flavor) or an Apprise config key that points to a preconfigured bundle of URLs.
-- Docker or Node.js 20+ if you want to run the service locally.
+- A SimpleFIN access link (looks like `https://user:pass@bridge.simplefin.org/simplefin`) from [beta-bridge.simplefin.org/info/developers](https://beta-bridge.simplefin.org/info/developers). When you generate it, copy the whole link—username, password, everything.
+- Somewhere for Apprise to deliver notifications: a Discord webhook, Matrix room, email address, SMS gateway, or a saved Apprise config key if you already have one.
+- Either Docker or Node.js 20+ on the machine that will run the bot.
 
 ## Quick Start (Docker Compose)
 
@@ -71,7 +71,7 @@ services:
       - "8000:8000"
 ```
 
-Each target can point at a stateful Apprise configuration entry via `appriseConfigKey` (recommended for long-lived destinations like each kid's device bundle) or provide a list of inline `appriseUrls` for quick one-off routing. Mix and match as needed—Balance Bot will call Apprise with whichever option you supply per target. Use `"*"` in `accountIds` when a notification should be sent for every account.
+Targets can point to named Apprise configs (great for “Elliot’s iPad + phone” bundles) or list URLs right in place for quick experiments. Feel free to mix both styles—Balance Bot will happily use whatever you provide. Drop a `"*"` into `accountIds` when a target should hear about every account you’re tracking.
 
 ## Configuration Reference
 
@@ -85,7 +85,7 @@ Each target can point at a stateful Apprise configuration entry via `appriseConf
 | `STATE_FILE_PATH`              | Where to persist the last known balances.                                                                    | `data/state.json`            |
 | `SIMPLEFIN_CACHE_PATH`         | Where cached SimpleFIN responses are stored.                                                                 | `data/cache.json`            |
 
-Fields inside `ACCOUNT_NOTIFICATION_TARGETS` are gently cleaned: whitespace is trimmed, blank account IDs are discarded, and empty destination lists are removed. Targets without destinations are ignored when notifications are sent.
+Balance Bot tidies up `ACCOUNT_NOTIFICATION_TARGETS` for you by trimming whitespace, skipping blank account IDs, and ignoring targets without any destinations so you don’t have to stress about perfect JSON formatting.
 
 ## Running Locally
 
@@ -95,7 +95,7 @@ npm test
 npm start
 ```
 
-Create a `.env` file (or export variables directly) with at least:
+Create a quick `.env` file (or export the same values another way) with at least:
 
 ```
 SIMPLEFIN_ACCESS_URL=https://user:pass@bridge.simplefin.org/simplefin
@@ -103,4 +103,4 @@ APPRISE_API_URL=http://localhost:8000/notify
 ACCOUNT_NOTIFICATION_TARGETS=[{"name":"Me","accountIds":["*"],"appriseUrls":["discord://..."]}]
 ```
 
-The app writes both state (`data/state.json`) and optional SimpleFIN cache (`data/cache.json`). Keep those files on a persistent volume so restarts stay quiet.
+The bot keeps track of the last balance it saw and any cached SimpleFIN responses under `data/`. Pop that folder on persistent storage (or bind-mount it in Docker) so it can pick up right where it left off.
