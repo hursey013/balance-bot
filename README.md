@@ -4,9 +4,9 @@ Balance Bot is a cheerful Node.js sidekick that watches the [SimpleFIN](https://
 
 ## Features
 
-👨‍👩‍👧 Route updates to multiple family members with per-account or wildcard targets.
-💾 Cache SimpleFIN responses between polls to stay friendly with rate limits.
-📣 Send emoji-rich, HTML-formatted balance alerts through any Apprise destination.
+- 👨‍👩‍👧 Route updates to multiple family members with per-account or wildcard targets.
+- 💾 Cache SimpleFIN responses between polls to stay friendly with rate limits.
+- 📣 Send emoji-rich, HTML-formatted balance alerts through any Apprise destination.
 
 ### Example Notification
 
