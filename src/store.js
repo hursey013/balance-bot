@@ -1,43 +1,61 @@
-import { mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { Low } from "lowdb";
-import { JSONFile } from "lowdb/node";
 
-const createDefaultState = () => ({ accounts: {} });
+const defaultState = () => ({ accounts: {} });
+
+const readStateFile = async (filePath) => {
+  try {
+    const contents = await readFile(filePath, "utf8");
+    const parsed = JSON.parse(contents);
+    if (parsed && typeof parsed === "object") {
+      if (!parsed.accounts || typeof parsed.accounts !== "object") {
+        parsed.accounts = {};
+      }
+      return parsed;
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+  return defaultState();
+};
+
+const writeStateFile = async (filePath, state) => {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  const payload = JSON.stringify(state, null, 2);
+  await writeFile(filePath, `${payload}\n`, "utf8");
+};
 
 const createStore = (filePath) => {
-  let db;
+  let statePromise;
+  let state;
 
-  const ensureDb = async () => {
-    if (!db) {
-      await mkdir(path.dirname(filePath), { recursive: true });
-      const adapter = new JSONFile(filePath);
-      db = new Low(adapter, createDefaultState());
-      await db.read();
-      if (!db.data || typeof db.data !== "object") {
-        db.data = createDefaultState();
-      }
-      if (!db.data.accounts || typeof db.data.accounts !== "object") {
-        db.data.accounts = {};
-      }
+  const loadState = async () => {
+    if (!statePromise) {
+      statePromise = readStateFile(filePath).then((data) => {
+        state = data;
+        return state;
+      });
     }
-    return db;
+    if (state) return state;
+    return statePromise;
   };
 
   const save = async () => {
-    const database = await ensureDb();
-    await database.write();
+    const current = await loadState();
+    await writeStateFile(filePath, current);
   };
 
   const getLastBalance = async (accountId) => {
-    const database = await ensureDb();
-    return database.data.accounts[accountId]?.lastBalance ?? null;
+    const current = await loadState();
+    return current.accounts[accountId]?.lastBalance ?? null;
   };
 
   const setLastBalance = async (accountId, balance) => {
-    const database = await ensureDb();
-    database.data.accounts[accountId] = { lastBalance: balance };
-    await database.write();
+    const current = await loadState();
+    current.accounts[accountId] = { lastBalance: balance };
+    await writeStateFile(filePath, current);
   };
 
   return { save, getLastBalance, setLastBalance };

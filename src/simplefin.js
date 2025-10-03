@@ -1,7 +1,5 @@
-import { mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { Low } from "lowdb";
-import { JSONFile } from "lowdb/node";
 import { requestJson, uniqueEntries } from "./utils.js";
 
 const createCacheKey = (accountIds) => {
@@ -19,27 +17,43 @@ const createCacheKey = (accountIds) => {
 const createCacheStore = (filePath) => {
   if (!filePath) return null;
 
-  let db;
+  let cachePromise;
+  let cache;
 
-  const ensureDb = async () => {
-    if (!db) {
-      await mkdir(path.dirname(filePath), { recursive: true });
-      const adapter = new JSONFile(filePath);
-      db = new Low(adapter, { entries: {} });
-      await db.read();
-      if (!db.data || typeof db.data !== "object") {
-        db.data = { entries: {} };
-      }
-      if (!db.data.entries || typeof db.data.entries !== "object") {
-        db.data.entries = {};
-      }
+  const loadCache = async () => {
+    if (!cachePromise) {
+      cachePromise = (async () => {
+        try {
+          const contents = await readFile(filePath, "utf8");
+          const parsed = JSON.parse(contents);
+          if (parsed && typeof parsed === "object" && parsed.entries) {
+            return parsed;
+          }
+        } catch (error) {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+        return { entries: {} };
+      })().then((data) => {
+        cache = data;
+        return cache;
+      });
     }
-    return db;
+    if (cache) return cache;
+    return cachePromise;
+  };
+
+  const persist = async () => {
+    const current = await loadCache();
+    await mkdir(path.dirname(filePath), { recursive: true });
+    const payload = JSON.stringify(current, null, 2);
+    await writeFile(filePath, `${payload}\n`, "utf8");
   };
 
   const get = async (key, maxAgeMs) => {
-    const database = await ensureDb();
-    const record = database.data.entries[key];
+    const current = await loadCache();
+    const record = current.entries[key];
     if (!record) return null;
     if (typeof maxAgeMs === "number" && maxAgeMs > 0) {
       const age = Date.now() - record.timestamp;
@@ -49,12 +63,12 @@ const createCacheStore = (filePath) => {
   };
 
   const set = async (key, value) => {
-    const database = await ensureDb();
-    database.data.entries[key] = {
+    const current = await loadCache();
+    current.entries[key] = {
       value,
       timestamp: Date.now(),
     };
-    await database.write();
+    await persist();
   };
 
   return { get, set };
