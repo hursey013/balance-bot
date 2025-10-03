@@ -1,13 +1,25 @@
 import cron from "node-cron";
-import config from "./config.js";
 import logger from "./logger.js";
-import createSimplefin from "./simplefin.js";
+import createSimplefin, { ensureSimplefinAccess } from "./simplefin.js";
 import createNotifier from "./notifier.js";
 import createStore from "./store.js";
 import createBalanceProcessor from "./balance.js";
+import { createConfig } from "./config.js";
 
 const main = async () => {
   logger.info("Booting balance bot");
+  const secret = await ensureSimplefinAccess();
+  if (!secret.accessUrl) {
+    throw new Error(
+      "SimpleFIN access URL is required. Provide SIMPLEFIN_ACCESS_URL, SIMPLEFIN_ACCESS_URL_FILE, or SIMPLEFIN_SETUP_TOKEN.",
+    );
+  }
+
+  const config = createConfig({
+    accessUrl: secret.accessUrl,
+    accessUrlFilePath: secret.filePath,
+  });
+
   const simplefinClient = createSimplefin(config.simplefin);
   const notifier = createNotifier(config.notifier);
   const stateStore = createStore(config.storage.stateFilePath);

@@ -4,7 +4,7 @@ import { trim, normalizeCacheTtl } from "./utils.js";
 
 /**
  * @typedef {object} BalanceBotConfig
- * @property {{ accessUrl: string, cacheFilePath: string, cacheTtlMs: number }} simplefin
+ * @property {{ accessUrl: string, cacheFilePath: string, cacheTtlMs: number, accessUrlFilePath?: string }} simplefin
  * @property {{ cronExpression: string }} polling
  * @property {{ appriseApiUrl: string }} notifier
  * @property {{ targets: Array<Record<string, any>> }} notifications
@@ -26,8 +26,12 @@ const parseTargets = (raw) => {
   return Array.isArray(parsed?.targets) ? parsed.targets : [];
 };
 
-export const createConfig = (env = process.env) => {
-  const accessUrl = trim(env.SIMPLEFIN_ACCESS_URL);
+export const createConfig = ({
+  env = process.env,
+  accessUrl,
+  accessUrlFilePath,
+} = {}) => {
+  const resolvedAccessUrl = trim(accessUrl ?? env.SIMPLEFIN_ACCESS_URL);
   const cronExpression = trim(env.POLL_CRON_EXPRESSION) || "0 * * * *";
   const appriseApiUrl =
     trim(env.APPRISE_API_URL) || "http://apprise:8000/notify";
@@ -82,9 +86,10 @@ export const createConfig = (env = process.env) => {
 
   return {
     simplefin: {
-      accessUrl,
+      accessUrl: resolvedAccessUrl,
       cacheFilePath,
       cacheTtlMs,
+      accessUrlFilePath,
     },
     polling: {
       cronExpression,
@@ -103,6 +108,4 @@ export const createConfig = (env = process.env) => {
 
 /** @typedef {ReturnType<typeof createConfig>} BalanceBotConfig */
 
-const config = createConfig();
-
-export default config;
+export default createConfig;

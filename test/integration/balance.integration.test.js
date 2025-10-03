@@ -38,7 +38,7 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
     APPRISE_API_URL: "http://apprise.local/notify",
   };
 
-  const config = createConfig(env);
+  const config = createConfig({ env });
 
   const originalFetch = global.fetch;
   const simplefinSnapshots = [

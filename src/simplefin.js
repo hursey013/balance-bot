@@ -1,5 +1,160 @@
+import crypto from "node:crypto";
+import fsPromises from "node:fs/promises";
+import path from "node:path";
+import logger from "./logger.js";
 import createJsonFileStore from "./jsonFileStore.js";
-import { requestJson, uniqueEntries } from "./utils.js";
+import { trim, requestJson, uniqueEntries, redactAccessUrl } from "./utils.js";
+
+const DEFAULT_SETUP_ENDPOINT =
+  "https://beta-bridge.simplefin.org/connect/token";
+const DEFAULT_ACCESS_URL_FILENAME = "simplefin-access-url";
+
+const resolveAccessFilePath = (env, explicitPath) => {
+  if (explicitPath) {
+    return path.resolve(explicitPath);
+  }
+  if (env?.SIMPLEFIN_ACCESS_URL_FILE) {
+    return path.resolve(env.SIMPLEFIN_ACCESS_URL_FILE);
+  }
+  return path.resolve("data", DEFAULT_ACCESS_URL_FILENAME);
+};
+
+const readAccessUrlFromFile = async (filePath) => {
+  try {
+    const content = await fsPromises.readFile(filePath, "utf8");
+    const lines = content.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = trim(line);
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+    return "";
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return "";
+    }
+    throw new Error(
+      `Failed to read SimpleFIN access URL file at ${filePath}: ${error.message}`,
+    );
+  }
+};
+
+const ensureRestrictedPermissions = async (filePath) => {
+  try {
+    const stats = await fsPromises.stat(filePath);
+    const mode = stats.mode & 0o777;
+    if ((mode & 0o077) !== 0) {
+      logger.warn("SimpleFIN access URL file has permissive permissions", {
+        filePath,
+        mode: mode.toString(8),
+      });
+    }
+  } catch (error) {
+    if (error && error.code !== "ENOENT") {
+      logger.warn("Unable to check permissions for SimpleFIN access URL file", {
+        filePath,
+        error: error.message,
+      });
+    }
+  }
+};
+
+const writeAccessUrlFile = async (filePath, accessUrl) => {
+  const directory = path.dirname(filePath);
+  await fsPromises.mkdir(directory, { recursive: true });
+  const tempFile = `${filePath}.${crypto.randomUUID()}.tmp`;
+  const data = `${trim(accessUrl)}\n`;
+  await fsPromises.writeFile(tempFile, data, { mode: 0o600 });
+  await fsPromises.chmod(tempFile, 0o600);
+  await fsPromises.rename(tempFile, filePath);
+  await ensureRestrictedPermissions(filePath);
+};
+
+const exchangeSetupToken = async ({ token, endpoint, fetchHeaders }) => {
+  const url = endpoint || DEFAULT_SETUP_ENDPOINT;
+  const response = await requestJson({
+    url,
+    method: "POST",
+    json: {
+      token,
+    },
+    headers: fetchHeaders,
+    errorContext: "SimpleFIN setup token exchange",
+  });
+
+  const accessUrl = trim(response.access_url ?? response.accessUrl);
+  if (!accessUrl) {
+    throw new Error("SimpleFIN setup response did not include access_url");
+  }
+
+  const expiresAt = response.expires_at ?? response.expiresAt;
+  return { accessUrl, expiresAt };
+};
+
+const ensureSimplefinAccess = async ({
+  env = process.env,
+  accessUrlFilePath,
+} = {}) => {
+  const accessUrlFromEnv = trim(env?.SIMPLEFIN_ACCESS_URL);
+  if (accessUrlFromEnv) {
+    return {
+      accessUrl: accessUrlFromEnv,
+      source: "env",
+      filePath: resolveAccessFilePath(env, accessUrlFilePath),
+    };
+  }
+
+  const targetFilePath = resolveAccessFilePath(env, accessUrlFilePath);
+  const accessUrlFromFile = await readAccessUrlFromFile(targetFilePath);
+  if (accessUrlFromFile) {
+    await ensureRestrictedPermissions(targetFilePath);
+    return {
+      accessUrl: accessUrlFromFile,
+      source: "file",
+      filePath: targetFilePath,
+    };
+  }
+
+  const setupToken = trim(env?.SIMPLEFIN_SETUP_TOKEN);
+  if (!setupToken) {
+    return {
+      accessUrl: "",
+      source: null,
+      filePath: targetFilePath,
+    };
+  }
+
+  logger.info("Exchanging SimpleFIN setup token for access URL");
+
+  const endpoint = trim(env?.SIMPLEFIN_SETUP_URL) || undefined;
+  const authHeader = trim(env?.SIMPLEFIN_SETUP_API_KEY);
+  const headers = authHeader ? { Authorization: authHeader } : undefined;
+  const { accessUrl, expiresAt } = await exchangeSetupToken({
+    token: setupToken,
+    endpoint,
+    fetchHeaders: headers,
+  });
+
+  await writeAccessUrlFile(targetFilePath, accessUrl);
+  if (env === process.env) {
+    process.env.SIMPLEFIN_ACCESS_URL = accessUrl;
+    process.env.SIMPLEFIN_SETUP_TOKEN = "";
+  }
+
+  logger.info("Stored SimpleFIN access URL", {
+    filePath: targetFilePath,
+    preview: redactAccessUrl(accessUrl),
+    expiresAt: expiresAt ?? undefined,
+  });
+
+  return {
+    accessUrl,
+    source: "token",
+    filePath: targetFilePath,
+    expiresAt: expiresAt ?? null,
+  };
+};
 
 const createCacheKey = (accountIds) => {
   if (!Array.isArray(accountIds) || accountIds.length === 0) {
@@ -137,6 +292,14 @@ const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
   };
 
   return { fetchAccounts };
+};
+
+export {
+  DEFAULT_SETUP_ENDPOINT,
+  ensureSimplefinAccess,
+  exchangeSetupToken,
+  writeAccessUrlFile,
+  readAccessUrlFromFile,
 };
 
 export default createSimplefin;

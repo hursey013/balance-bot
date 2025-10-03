@@ -4,7 +4,7 @@ import path from "node:path";
 import { createConfig } from "../src/config.js";
 
 test("createConfig returns defaults when env is empty", () => {
-  const config = createConfig({});
+  const config = createConfig({ env: {} });
   assert.equal(config.simplefin.accessUrl, "");
   assert.equal(config.simplefin.cacheFilePath, path.resolve("data/cache.json"));
   assert.equal(config.simplefin.cacheTtlMs, 60 * 60 * 1000);
@@ -36,7 +36,7 @@ test("createConfig respects override values", () => {
     ]),
   };
 
-  const config = createConfig(env);
+  const config = createConfig({ env });
 
   assert.equal(config.simplefin.accessUrl, "https://example.org/simplefin");
   assert.equal(config.simplefin.cacheFilePath, path.resolve("tmp/cache.json"));
@@ -66,7 +66,7 @@ test("createConfig treats blank target env as empty array", () => {
     ACCOUNT_NOTIFICATION_TARGETS: "   ",
   };
 
-  const config = createConfig(env);
+  const config = createConfig({ env });
   assert.deepEqual(config.notifications.targets, []);
 });
 
@@ -82,7 +82,7 @@ test("createConfig trims target fields and discards blanks", () => {
     ]),
   };
 
-  const config = createConfig(env);
+  const config = createConfig({ env });
   assert.deepEqual(config.notifications.targets, [
     {
       name: "Elliot",

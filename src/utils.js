@@ -62,13 +62,47 @@ const uniqueEntries = (items) => {
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 
-const requestJson = async ({ url, headers, errorContext }) => {
-  const response = await fetch(url, {
+const redactAccessUrl = (value) => {
+  const trimmed = trim(value);
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.username) {
+      parsed.username = "****";
+    }
+    if (parsed.password) {
+      parsed.password = "****";
+    }
+    return parsed.toString();
+  } catch {
+    return "(redacted)";
+  }
+};
+
+const requestJson = async ({
+  url,
+  method = "GET",
+  headers,
+  json,
+  body,
+  errorContext,
+}) => {
+  const init = {
+    method,
     headers: {
       Accept: "application/json",
       ...(headers ?? {}),
     },
-  });
+  };
+
+  if (json !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(json);
+  } else if (body !== undefined) {
+    init.body = body;
+  }
+
+  const response = await fetch(url, init);
   if (!response.ok) {
     const body = await response.text();
     const contextMessage = errorContext ?? `Request for ${url}`;
@@ -88,5 +122,6 @@ export {
   formatCurrency,
   uniqueEntries,
   trimTrailingSlash,
+  redactAccessUrl,
   requestJson,
 };
