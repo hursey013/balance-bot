@@ -2,6 +2,15 @@ import path from "node:path";
 import "dotenv/config";
 import { trim, normalizeCacheTtl } from "./utils.js";
 
+/**
+ * @typedef {object} BalanceBotConfig
+ * @property {{ accessUrl: string, cacheFilePath: string, cacheTtlMs: number }} simplefin
+ * @property {{ cronExpression: string }} polling
+ * @property {{ appriseApiUrl: string }} notifier
+ * @property {{ targets: Array<Record<string, any>> }} notifications
+ * @property {{ stateFilePath: string }} storage
+ */
+
 const parseTargets = (raw) => {
   const value = trim(raw);
   if (!value) return [];
@@ -91,6 +100,8 @@ export const createConfig = (env = process.env) => {
     },
   };
 };
+
+/** @typedef {ReturnType<typeof createConfig>} BalanceBotConfig */
 
 const config = createConfig();
 

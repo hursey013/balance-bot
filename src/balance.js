@@ -1,6 +1,18 @@
 import logger from "./logger.js";
 import { resolveBalanceInfo, formatCurrency, uniqueEntries } from "./utils.js";
 
+/**
+ * @typedef {import("./config.js").BalanceBotConfig} BalanceBotConfig
+ */
+
+/**
+ * @param {object} options
+ * @param {{ fetchAccounts: (params?: { accountIds?: string[] }) => Promise<Array<Record<string, any>>> }} options.simplefinClient
+ * @param {{ sendNotification: (payload: { title: string, body: string, urls?: string[], configKey?: string }) => Promise<void> }} options.notifier
+ * @param {{ getLastBalance: (accountId: string) => Promise<number|null>, setLastBalance: (accountId: string, balance: number) => Promise<void>, save: () => Promise<void> }} options.store
+ * @param {BalanceBotConfig} options.config
+ * @param {{ info: Function, warn: Function, error: Function }} [options.logger]
+ */
 const createBalanceProcessor = ({
   simplefinClient,
   notifier,

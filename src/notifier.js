@@ -1,5 +1,13 @@
 import { trimTrailingSlash } from "./utils.js";
 
+/**
+ * @typedef {object} NotificationPayload
+ * @property {string} title
+ * @property {string} body
+ * @property {string[]|undefined} urls
+ * @property {string|undefined} configKey
+ */
+
 const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   const payload = {
     title,
@@ -31,6 +39,9 @@ const createNotifier = ({ appriseApiUrl }) => {
 
   const baseUrl = trimTrailingSlash(appriseApiUrl);
 
+  /**
+   * @param {NotificationPayload} options
+   */
   const sendNotification = async ({ title, body, urls, configKey }) => {
     const targets = Array.isArray(urls) ? urls.filter(Boolean) : [];
     const key = configKey ? configKey.trim() : "";

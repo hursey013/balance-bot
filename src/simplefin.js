@@ -1,5 +1,4 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import createJsonFileStore from "./jsonFileStore.js";
 import { requestJson, uniqueEntries } from "./utils.js";
 
 const createCacheKey = (accountIds) => {
@@ -14,45 +13,21 @@ const createCacheKey = (accountIds) => {
   return `accounts:${uniqueSortedIds.join(",")}`;
 };
 
+/**
+ * @typedef {{ entries: Record<string, { value: any, timestamp: number }> }} CacheState
+ */
+
 const createCacheStore = (filePath) => {
   if (!filePath) return null;
 
-  let cachePromise;
-  let cache;
-
-  const loadCache = async () => {
-    if (!cachePromise) {
-      cachePromise = (async () => {
-        try {
-          const contents = await readFile(filePath, "utf8");
-          const parsed = JSON.parse(contents);
-          if (parsed && typeof parsed === "object" && parsed.entries) {
-            return parsed;
-          }
-        } catch (error) {
-          if (error.code !== "ENOENT") {
-            throw error;
-          }
-        }
-        return { entries: {} };
-      })().then((data) => {
-        cache = data;
-        return cache;
-      });
-    }
-    if (cache) return cache;
-    return cachePromise;
-  };
-
-  const persist = async () => {
-    const current = await loadCache();
-    await mkdir(path.dirname(filePath), { recursive: true });
-    const payload = JSON.stringify(current, null, 2);
-    await writeFile(filePath, `${payload}\n`, "utf8");
-  };
+  const cacheStore = createJsonFileStore({
+    filePath,
+    defaultData: /** @returns {CacheState} */ () => ({ entries: {} }),
+    autoFlush: true,
+  });
 
   const get = async (key, maxAgeMs) => {
-    const current = await loadCache();
+    const current = await cacheStore.load();
     const record = current.entries[key];
     if (!record) return null;
     if (typeof maxAgeMs === "number" && maxAgeMs > 0) {
@@ -63,17 +38,23 @@ const createCacheStore = (filePath) => {
   };
 
   const set = async (key, value) => {
-    const current = await loadCache();
-    current.entries[key] = {
-      value,
-      timestamp: Date.now(),
-    };
-    await persist();
+    await cacheStore.update((current) => {
+      current.entries[key] = {
+        value,
+        timestamp: Date.now(),
+      };
+    });
   };
 
   return { get, set };
 };
 
+/**
+ * @param {object} options
+ * @param {string} options.accessUrl
+ * @param {string} [options.cacheFilePath]
+ * @param {number} [options.cacheTtlMs=0]
+ */
 const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
   if (!accessUrl) {
     throw new Error("SimpleFIN access URL is required");
@@ -115,6 +96,9 @@ const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     await cache.set(key, value);
   };
 
+  /**
+   * @param {{ accountIds?: string[] }} [params]
+   */
   const fetchAccounts = async ({ accountIds } = {}) => {
     const requestUrl = new URL(baseUrl);
     requestUrl.searchParams.set("balances-only", "1");
