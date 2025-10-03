@@ -16,6 +16,8 @@
   <a href="https://ghcr.io/hursey013/balance-bot"><img alt="Image" src="https://img.shields.io/badge/ghcr-image-blue"></a>
 </p>
 
+## Overview
+
 Balance Bot is a friendly little Node.js helper that keeps an eye on the [SimpleFIN](https://beta-bridge.simplefin.org) bridge and nudges [Apprise](https://github.com/caronc/apprise) whenever money moves. It was built for families with kids who are too young for the bank’s app but still want to know when allowance hits—or when snack money disappears—without Mom or Dad relaying every single update.
 
 ## Features
