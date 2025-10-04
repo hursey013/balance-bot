@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { createConfig } from "../../src/config.js";
-import createSimplefin from "../../src/simplefin.js";
+import createSimplefinClient from "../../src/simplefin.js";
 import createNotifier from "../../src/notifier.js";
 import createStore from "../../src/store.js";
 import createBalanceProcessor from "../../src/balance.js";
@@ -89,7 +89,17 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
     }
   });
 
-  const simplefinClient = createSimplefin(config.simplefin);
+  const simplefinClient = createSimplefinClient({
+    env,
+    accessUrlFilePath: config.simplefin.accessUrlFilePath,
+    cacheFilePath: config.simplefin.cacheFilePath,
+    cacheTtlMs: config.simplefin.cacheTtlMs,
+  });
+
+  if (config.simplefin.accessUrl) {
+    simplefinClient.setAccessUrl(config.simplefin.accessUrl);
+  }
+  await simplefinClient.ensureAccess();
   const notifier = createNotifier(config.notifier);
   const store = createStore(config.storage.stateFilePath);
   const balanceProcessor = createBalanceProcessor({

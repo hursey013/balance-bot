@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import createSimplefin, { ensureSimplefinAccess } from "../src/simplefin.js";
+import createSimplefinClient, {
+  createSimplefinApi,
+  ensureSimplefinAccess,
+} from "../src/simplefin.js";
 
 const withTempDir = async (t, prefix) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -43,7 +46,7 @@ test("SimpleFIN client caches results when TTL is positive", async (t) => {
     };
   };
 
-  const client = createSimplefin({
+  const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 60_000,
@@ -70,7 +73,7 @@ test("SimpleFIN client bypasses cache when TTL is zero", async (t) => {
     };
   };
 
-  const client = createSimplefin({
+  const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -93,7 +96,7 @@ test("SimpleFIN client includes Basic Auth credentials", async (t) => {
     return { ok: true, json: async () => ({ accounts: [] }) };
   };
 
-  const client = createSimplefin({
+  const client = createSimplefinApi({
     accessUrl: "https://name:secret@beta-bridge.simplefin.org/access",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -120,7 +123,7 @@ test("SimpleFIN client does not double-append accounts path", async (t) => {
     return { ok: true, json: async () => ({ accounts: [] }) };
   };
 
-  const client = createSimplefin({
+  const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin/accounts",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -140,7 +143,7 @@ test("SimpleFIN client throws when SimpleFIN responds without accounts", async (
 
   global.fetch = async () => ({ ok: true, json: async () => ({}) });
 
-  const client = createSimplefin({
+  const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
@@ -160,7 +163,7 @@ test("SimpleFIN client surfaces HTTP failures", async (t) => {
     text: async () => "Internal Server Error",
   });
 
-  const client = createSimplefin({
+  const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
     cacheFilePath: cachePath,
     cacheTtlMs: 0,
