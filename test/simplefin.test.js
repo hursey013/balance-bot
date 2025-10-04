@@ -3,19 +3,17 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import createSimplefin from "../src/simplefin.js";
+import createSimplefin, { ensureSimplefinAccess } from "../src/simplefin.js";
 
-const withTempDir = async (t) => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "balance-bot-test-"));
+const withTempDir = async (t, prefix) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
   t.after(async () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
   return dir;
 };
 
-test("SimpleFIN client caches results when TTL is positive", async (t) => {
-  const tempDir = await withTempDir(t);
-  const cachePath = path.join(tempDir, "cache.json");
+const restoreFetch = (t) => {
   const originalFetch = global.fetch;
   t.after(() => {
     if (originalFetch) {
@@ -24,6 +22,13 @@ test("SimpleFIN client caches results when TTL is positive", async (t) => {
       delete global.fetch;
     }
   });
+  return originalFetch;
+};
+
+test("SimpleFIN client caches results when TTL is positive", async (t) => {
+  const tempDir = await withTempDir(t, "balance-bot-cache-");
+  const cachePath = path.join(tempDir, "cache.json");
+  restoreFetch(t);
 
   let callCount = 0;
   const accountsPayload = [{ id: "acct-1", balance: "100", currency: "USD" }];
@@ -52,16 +57,9 @@ test("SimpleFIN client caches results when TTL is positive", async (t) => {
 });
 
 test("SimpleFIN client bypasses cache when TTL is zero", async (t) => {
-  const tempDir = await withTempDir(t);
+  const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  const originalFetch = global.fetch;
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  restoreFetch(t);
 
   let callCount = 0;
   global.fetch = async () => {
@@ -85,16 +83,9 @@ test("SimpleFIN client bypasses cache when TTL is zero", async (t) => {
 });
 
 test("SimpleFIN client includes Basic Auth credentials", async (t) => {
-  const tempDir = await withTempDir(t);
+  const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  const originalFetch = global.fetch;
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  restoreFetch(t);
 
   let lastRequest = null;
   global.fetch = async (url, options) => {
@@ -111,7 +102,7 @@ test("SimpleFIN client includes Basic Auth credentials", async (t) => {
   await client.fetchAccounts();
 
   assert(lastRequest);
-  assert(lastRequest.url.includes('/access/accounts?'));
+  assert(lastRequest.url.includes("/access/accounts?"));
   assert.equal(
     lastRequest.options.headers.Authorization,
     `Basic ${Buffer.from("name:secret").toString("base64")}`,
@@ -119,16 +110,9 @@ test("SimpleFIN client includes Basic Auth credentials", async (t) => {
 });
 
 test("SimpleFIN client does not double-append accounts path", async (t) => {
-  const tempDir = await withTempDir(t);
+  const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  const originalFetch = global.fetch;
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  restoreFetch(t);
 
   let calledUrl;
   global.fetch = async (url) => {
@@ -150,16 +134,9 @@ test("SimpleFIN client does not double-append accounts path", async (t) => {
 });
 
 test("SimpleFIN client throws when SimpleFIN responds without accounts", async (t) => {
-  const tempDir = await withTempDir(t);
+  const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  const originalFetch = global.fetch;
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  restoreFetch(t);
 
   global.fetch = async () => ({ ok: true, json: async () => ({}) });
 
@@ -173,16 +150,9 @@ test("SimpleFIN client throws when SimpleFIN responds without accounts", async (
 });
 
 test("SimpleFIN client surfaces HTTP failures", async (t) => {
-  const tempDir = await withTempDir(t);
+  const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  const originalFetch = global.fetch;
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  restoreFetch(t);
 
   global.fetch = async () => ({
     ok: false,
@@ -200,4 +170,72 @@ test("SimpleFIN client surfaces HTTP failures", async (t) => {
     () => client.fetchAccounts(),
     /SimpleFIN request failed with status 500/i,
   );
+});
+
+test("ensureSimplefinAccess prefers explicit env secret", async (t) => {
+  const tempDir = await withTempDir(t, "balance-bot-access-");
+  const targetFile = path.join(tempDir, "secret");
+  restoreFetch(t);
+
+  global.fetch = () => {
+    throw new Error("fetch should not be called when SIMPLEFIN_ACCESS_URL is set");
+  };
+
+  const env = {
+    SIMPLEFIN_ACCESS_URL: "https://user:pass@bridge.simplefin.org/simplefin",
+  };
+
+  const result = await ensureSimplefinAccess({ env, accessUrlFilePath: targetFile });
+  assert.equal(result.accessUrl, env.SIMPLEFIN_ACCESS_URL);
+  assert.equal(result.source, "env");
+  assert.equal(result.filePath, path.resolve(targetFile));
+});
+
+test("ensureSimplefinAccess reads secret from file when present", async (t) => {
+  const tempDir = await withTempDir(t, "balance-bot-access-");
+  const targetFile = path.join(tempDir, "simplefin-access-url");
+  await fs.writeFile(targetFile, "https://user:pass@bridge.simplefin.org/simplefin\n", {
+    mode: 0o600,
+  });
+
+  const env = {};
+  const result = await ensureSimplefinAccess({ env, accessUrlFilePath: targetFile });
+  assert.equal(result.accessUrl, "https://user:pass@bridge.simplefin.org/simplefin");
+  assert.equal(result.source, "file");
+  assert.equal(result.filePath, path.resolve(targetFile));
+});
+
+test("ensureSimplefinAccess exchanges setup token and writes file", async (t) => {
+  const tempDir = await withTempDir(t, "balance-bot-access-");
+  const targetFile = path.join(tempDir, "simplefin-access-url");
+  restoreFetch(t);
+
+  let lastRequest;
+  global.fetch = async (url, options) => {
+    lastRequest = { url, options };
+    return {
+      ok: true,
+      status: 200,
+      text: async () => "https://demo:secret@bridge.simplefin.org/simplefin",
+    };
+  };
+
+  const claimUrl = "https://bridge.simplefin.org/connect/claim/demo";
+  const encodedToken = Buffer.from(claimUrl, "utf8").toString("base64");
+  const env = {
+    SIMPLEFIN_SETUP_TOKEN: encodedToken,
+  };
+
+  const result = await ensureSimplefinAccess({ env, accessUrlFilePath: targetFile });
+
+  assert.ok(lastRequest);
+  assert.equal(lastRequest.url, claimUrl);
+  assert.equal(lastRequest.options.method, "POST");
+  assert.equal(lastRequest.options.body, undefined);
+  assert.deepEqual(lastRequest.options.headers ?? {}, {});
+  assert.equal(result.accessUrl, "https://demo:secret@bridge.simplefin.org/simplefin");
+  assert.equal(result.source, "token");
+  assert.equal(result.expiresAt, null);
+  const stored = await fs.readFile(targetFile, "utf8");
+  assert.match(stored, /https:\/\/demo:secret@bridge.simplefin.org\/simplefin/);
 });

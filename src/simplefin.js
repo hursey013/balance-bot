@@ -5,9 +5,45 @@ import logger from "./logger.js";
 import createJsonFileStore from "./jsonFileStore.js";
 import { trim, requestJson, uniqueEntries, redactAccessUrl } from "./utils.js";
 
-const DEFAULT_SETUP_ENDPOINT =
-  "https://beta-bridge.simplefin.org/connect/token";
 const DEFAULT_ACCESS_URL_FILENAME = "simplefin-access-url";
+
+const decodeSetupToken = (value) => {
+  const trimmed = trim(value);
+  if (!trimmed) {
+    return { token: "", claimUrl: "" };
+  }
+
+  const normalized = trimmed.replace(/-/g, "+").replace(/_/g, "/");
+  const padding =
+    normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+
+  let decoded;
+  try {
+    decoded = Buffer.from(`${normalized}${padding}`, "base64").toString("utf8");
+  } catch (error) {
+    throw new Error(
+      `Invalid SimpleFIN setup token: ${error.message ?? "unable to decode base64"}`,
+    );
+  }
+
+  let claimUrl;
+  try {
+    claimUrl = new URL(decoded);
+  } catch (error) {
+    throw new Error(
+      `SimpleFIN setup token decoded to an invalid URL: ${error.message}`,
+    );
+  }
+
+  if (claimUrl.protocol !== "https:") {
+    throw new Error("SimpleFIN claim URL must use HTTPS");
+  }
+
+  return {
+    token: trimmed,
+    claimUrl: claimUrl.toString(),
+  };
+};
 
 const resolveAccessFilePath = (env, explicitPath) => {
   if (explicitPath) {
@@ -71,31 +107,32 @@ const writeAccessUrlFile = async (filePath, accessUrl) => {
   await ensureRestrictedPermissions(filePath);
 };
 
-const exchangeSetupToken = async ({ token, endpoint, fetchHeaders }) => {
-  const url = endpoint || DEFAULT_SETUP_ENDPOINT;
-  const response = await requestJson({
-    url,
-    method: "POST",
-    json: {
-      token,
-    },
-    headers: fetchHeaders,
-    errorContext: "SimpleFIN setup token exchange",
-  });
-
-  const accessUrl = trim(response.access_url ?? response.accessUrl);
-  if (!accessUrl) {
-    throw new Error("SimpleFIN setup response did not include access_url");
+const exchangeSetupToken = async ({ claimUrl, fetchHeaders }) => {
+  const requestOptions = { method: "POST" };
+  if (fetchHeaders && Object.keys(fetchHeaders).length) {
+    requestOptions.headers = fetchHeaders;
   }
 
-  const expiresAt = response.expires_at ?? response.expiresAt;
-  return { accessUrl, expiresAt };
+  const response = await fetch(claimUrl, requestOptions);
+
+  const responseBody = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `SimpleFIN token claim failed with status ${response.status}: ${responseBody}`,
+    );
+  }
+
+  const accessUrl = trim(responseBody);
+  if (!accessUrl) {
+    throw new Error(
+      "SimpleFIN token claim response did not include an access URL",
+    );
+  }
+
+  return { accessUrl, expiresAt: null };
 };
 
-const ensureSimplefinAccess = async ({
-  env = process.env,
-  accessUrlFilePath,
-} = {}) => {
+const ensureSimplefinAccess = async ({ env = process.env, accessUrlFilePath } = {}) => {
   const accessUrlFromEnv = trim(env?.SIMPLEFIN_ACCESS_URL);
   if (accessUrlFromEnv) {
     return {
@@ -116,8 +153,8 @@ const ensureSimplefinAccess = async ({
     };
   }
 
-  const setupToken = trim(env?.SIMPLEFIN_SETUP_TOKEN);
-  if (!setupToken) {
+  const setupTokenRaw = trim(env?.SIMPLEFIN_SETUP_TOKEN);
+  if (!setupTokenRaw) {
     return {
       accessUrl: "",
       source: null,
@@ -127,13 +164,23 @@ const ensureSimplefinAccess = async ({
 
   logger.info("Exchanging SimpleFIN setup token for access URL");
 
-  const endpoint = trim(env?.SIMPLEFIN_SETUP_URL) || undefined;
-  const authHeader = trim(env?.SIMPLEFIN_SETUP_API_KEY);
-  const headers = authHeader ? { Authorization: authHeader } : undefined;
+  const endpointOverride = trim(env?.SIMPLEFIN_SETUP_URL) || "";
+  const { claimUrl } = decodeSetupToken(setupTokenRaw);
+  const targetClaimUrlString = endpointOverride || claimUrl;
+  let targetClaimUrl;
+  try {
+    const parsed = new URL(targetClaimUrlString);
+    if (parsed.protocol !== "https:") {
+      throw new Error("SimpleFIN claim URL must use HTTPS");
+    }
+    targetClaimUrl = parsed.toString();
+  } catch (error) {
+    throw new Error(
+      `Invalid SimpleFIN claim URL: ${error.message ?? "unable to parse"}`,
+    );
+  }
   const { accessUrl, expiresAt } = await exchangeSetupToken({
-    token: setupToken,
-    endpoint,
-    fetchHeaders: headers,
+    claimUrl: targetClaimUrl,
   });
 
   await writeAccessUrlFile(targetFilePath, accessUrl);
@@ -295,7 +342,6 @@ const createSimplefin = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
 };
 
 export {
-  DEFAULT_SETUP_ENDPOINT,
   ensureSimplefinAccess,
   exchangeSetupToken,
   writeAccessUrlFile,

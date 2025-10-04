@@ -107,7 +107,6 @@ Targets can point to named Apprise configs (great for “Elliot’s iPad + phone
 | `STATE_FILE_PATH`              | Where to persist the last known balances.                                                                                                                                | `data/state.json`                                 |
 | `SIMPLEFIN_CACHE_PATH`         | Where cached SimpleFIN responses are stored.                                                                                                                             | `data/cache.json`                                 |
 | `SIMPLEFIN_SETUP_URL`          | Override the endpoint used to exchange setup tokens (mostly for testing).                                                                                                | `https://beta-bridge.simplefin.org/connect/token` |
-| `SIMPLEFIN_SETUP_API_KEY`      | Authorization header included when calling the setup endpoint, if your environment requires one.                                                                         | unset                                             |
 
 Balance Bot tidies up `ACCOUNT_NOTIFICATION_TARGETS` for you by trimming whitespace, skipping blank account IDs, and ignoring targets without any destinations so you don’t have to stress about perfect JSON formatting.
 
