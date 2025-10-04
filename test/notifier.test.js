@@ -1,22 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import nock from "nock";
 import createNotifier from "../src/notifier.js";
 
-test("notifier posts notifications with supplied URLs", async (t) => {
-  const originalFetch = global.fetch;
-  let capturedRequest;
-  global.fetch = async (url, options) => {
-    capturedRequest = { url, options };
-    return { ok: true, text: async () => "" };
-  };
+nock.disableNetConnect();
 
+const ensureNoPendingNocks = (t) => {
   t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
+    if (!nock.isDone()) {
+      const pending = nock.pendingMocks();
+      nock.cleanAll();
+      throw new Error(`Pending mocks: ${pending.join(", ")}`);
     }
   });
+};
+
+test("notifier posts notifications with supplied URLs", async (t) => {
+  ensureNoPendingNocks(t);
+
+  let capturedPayload;
+  nock("http://apprise:8000")
+    .post("/notify", (body) => {
+      capturedPayload = body;
+      return true;
+    })
+    .reply(200, "");
 
   const notifier = createNotifier({
     appriseApiUrl: "http://apprise:8000/notify",
@@ -28,28 +36,21 @@ test("notifier posts notifications with supplied URLs", async (t) => {
     urls: ["pover://token@user/"],
   });
 
-  assert(capturedRequest);
-  const payload = JSON.parse(capturedRequest.options.body);
-  assert.equal(payload.title, "Balance update");
-  assert.equal(payload.format, "html");
-  assert.deepEqual(payload.urls, ["pover://token@user/"]);
+  assert.equal(capturedPayload.title, "Balance update");
+  assert.equal(capturedPayload.format, "html");
+  assert.deepEqual(capturedPayload.urls, ["pover://token@user/"]);
 });
 
 test("notifier targets config keys without duplicating URLs", async (t) => {
-  const originalFetch = global.fetch;
-  let capturedRequest;
-  global.fetch = async (url, options) => {
-    capturedRequest = { url, options };
-    return { ok: true, text: async () => "" };
-  };
+  ensureNoPendingNocks(t);
 
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  let capturedPayload;
+  nock("http://apprise:8000")
+    .post("/kids", (body) => {
+      capturedPayload = body;
+      return true;
+    })
+    .reply(200, "");
 
   const notifier = createNotifier({ appriseApiUrl: "http://apprise:8000" });
 
@@ -60,10 +61,7 @@ test("notifier targets config keys without duplicating URLs", async (t) => {
     configKey: "kids",
   });
 
-  assert(capturedRequest);
-  assert.equal(capturedRequest.url, "http://apprise:8000/kids");
-  const payload = JSON.parse(capturedRequest.options.body);
-  assert.equal(payload.urls, undefined);
+  assert.equal(capturedPayload.urls, undefined);
 });
 
 test("notifier rejects when no destinations are provided", async () => {

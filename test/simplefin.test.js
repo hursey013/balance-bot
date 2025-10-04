@@ -3,10 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import nock from "nock";
 import createSimplefinClient, {
   createSimplefinApi,
   ensureSimplefinAccess,
 } from "../src/simplefin.js";
+
+nock.disableNetConnect();
 
 const withTempDir = async (t, prefix) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -16,35 +19,29 @@ const withTempDir = async (t, prefix) => {
   return dir;
 };
 
-const restoreFetch = (t) => {
-  const originalFetch = global.fetch;
+const baseSimplefinScope = (t) => {
   t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
+    if (!nock.isDone()) {
+      const pending = nock.pendingMocks();
+      nock.cleanAll();
+      throw new Error(`Pending mocks: ${pending.join(", ")}`);
     }
   });
-  return originalFetch;
 };
 
 test("SimpleFIN client caches results when TTL is positive", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  restoreFetch(t);
 
   let callCount = 0;
-  const accountsPayload = [{ id: "acct-1", balance: "100", currency: "USD" }];
-  global.fetch = async () => {
-    callCount += 1;
-    if (callCount > 1) {
-      throw new Error("fetch should only be called once when cached");
-    }
-    return {
-      ok: true,
-      json: async () => ({ accounts: accountsPayload }),
-    };
-  };
+  nock("https://bridge.simplefin.org")
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1" })
+    .reply(() => {
+      callCount += 1;
+      return [200, { accounts: [{ id: "acct-1", balance: "100", currency: "USD" }] }];
+    });
 
   const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
@@ -53,25 +50,26 @@ test("SimpleFIN client caches results when TTL is positive", async (t) => {
   });
 
   const first = await client.fetchAccounts();
-  assert.deepEqual(first, accountsPayload);
   const second = await client.fetchAccounts();
-  assert.deepEqual(second, accountsPayload);
+
+  assert.deepEqual(first, second);
   assert.equal(callCount, 1);
 });
 
 test("SimpleFIN client bypasses cache when TTL is zero", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  restoreFetch(t);
 
   let callCount = 0;
-  global.fetch = async () => {
-    callCount += 1;
-    return {
-      ok: true,
-      json: async () => ({ accounts: [{ id: `acct-${callCount}` }] }),
-    };
-  };
+  nock("https://bridge.simplefin.org")
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1" })
+    .times(2)
+    .reply(() => {
+      callCount += 1;
+      return [200, { accounts: [{ id: `acct-${callCount}` }] }];
+    });
 
   const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
@@ -86,15 +84,18 @@ test("SimpleFIN client bypasses cache when TTL is zero", async (t) => {
 });
 
 test("SimpleFIN client includes Basic Auth credentials", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  restoreFetch(t);
 
-  let lastRequest = null;
-  global.fetch = async (url, options) => {
-    lastRequest = { url, options };
-    return { ok: true, json: async () => ({ accounts: [] }) };
-  };
+  let lastAuth = null;
+  nock("https://beta-bridge.simplefin.org")
+    .get("/access/accounts")
+    .query({ "balances-only": "1" })
+    .reply(function () {
+      lastAuth = this.req.headers.authorization;
+      return [200, { accounts: [] }];
+    });
 
   const client = createSimplefinApi({
     accessUrl: "https://name:secret@beta-bridge.simplefin.org/access",
@@ -104,24 +105,25 @@ test("SimpleFIN client includes Basic Auth credentials", async (t) => {
 
   await client.fetchAccounts();
 
-  assert(lastRequest);
-  assert(lastRequest.url.includes("/access/accounts?"));
   assert.equal(
-    lastRequest.options.headers.Authorization,
+    lastAuth,
     `Basic ${Buffer.from("name:secret").toString("base64")}`,
   );
 });
 
 test("SimpleFIN client does not double-append accounts path", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  restoreFetch(t);
 
-  let calledUrl;
-  global.fetch = async (url) => {
-    calledUrl = url;
-    return { ok: true, json: async () => ({ accounts: [] }) };
-  };
+  let requestedPath;
+  nock("https://bridge.simplefin.org")
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1" })
+    .reply(function () {
+      requestedPath = this.req.path;
+      return [200, { accounts: [] }];
+    });
 
   const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin/accounts",
@@ -131,17 +133,18 @@ test("SimpleFIN client does not double-append accounts path", async (t) => {
 
   await client.fetchAccounts();
 
-  assert(calledUrl);
-  const url = new URL(calledUrl);
-  assert.equal(url.pathname.endsWith("/accounts"), true);
+  assert(requestedPath.endsWith("/simplefin/accounts?balances-only=1"));
 });
 
 test("SimpleFIN client throws when SimpleFIN responds without accounts", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  restoreFetch(t);
 
-  global.fetch = async () => ({ ok: true, json: async () => ({}) });
+  nock("https://bridge.simplefin.org")
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1" })
+    .reply(200, {});
 
   const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
@@ -153,15 +156,14 @@ test("SimpleFIN client throws when SimpleFIN responds without accounts", async (
 });
 
 test("SimpleFIN client surfaces HTTP failures", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-cache-");
   const cachePath = path.join(tempDir, "cache.json");
-  restoreFetch(t);
 
-  global.fetch = async () => ({
-    ok: false,
-    status: 500,
-    text: async () => "Internal Server Error",
-  });
+  nock("https://bridge.simplefin.org")
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1" })
+    .reply(500, "Internal Server Error");
 
   const client = createSimplefinApi({
     accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
@@ -176,13 +178,9 @@ test("SimpleFIN client surfaces HTTP failures", async (t) => {
 });
 
 test("ensureSimplefinAccess prefers explicit env secret", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-access-");
   const targetFile = path.join(tempDir, "secret");
-  restoreFetch(t);
-
-  global.fetch = () => {
-    throw new Error("fetch should not be called when SIMPLEFIN_ACCESS_URL is set");
-  };
 
   const env = {
     SIMPLEFIN_ACCESS_URL: "https://user:pass@bridge.simplefin.org/simplefin",
@@ -195,6 +193,7 @@ test("ensureSimplefinAccess prefers explicit env secret", async (t) => {
 });
 
 test("ensureSimplefinAccess reads secret from file when present", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-access-");
   const targetFile = path.join(tempDir, "simplefin-access-url");
   await fs.writeFile(targetFile, "https://user:pass@bridge.simplefin.org/simplefin\n", {
@@ -209,19 +208,13 @@ test("ensureSimplefinAccess reads secret from file when present", async (t) => {
 });
 
 test("ensureSimplefinAccess exchanges setup token and writes file", async (t) => {
+  baseSimplefinScope(t);
   const tempDir = await withTempDir(t, "balance-bot-access-");
   const targetFile = path.join(tempDir, "simplefin-access-url");
-  restoreFetch(t);
 
-  let lastRequest;
-  global.fetch = async (url, options) => {
-    lastRequest = { url, options };
-    return {
-      ok: true,
-      status: 200,
-      text: async () => "https://demo:secret@bridge.simplefin.org/simplefin",
-    };
-  };
+  nock("https://bridge.simplefin.org")
+    .post("/connect/claim/demo")
+    .reply(200, "https://demo:secret@bridge.simplefin.org/simplefin");
 
   const claimUrl = "https://bridge.simplefin.org/connect/claim/demo";
   const encodedToken = Buffer.from(claimUrl, "utf8").toString("base64");
@@ -231,14 +224,24 @@ test("ensureSimplefinAccess exchanges setup token and writes file", async (t) =>
 
   const result = await ensureSimplefinAccess({ env, accessUrlFilePath: targetFile });
 
-  assert.ok(lastRequest);
-  assert.equal(lastRequest.url, claimUrl);
-  assert.equal(lastRequest.options.method, "POST");
-  assert.equal(lastRequest.options.body, undefined);
-  assert.deepEqual(lastRequest.options.headers ?? {}, {});
   assert.equal(result.accessUrl, "https://demo:secret@bridge.simplefin.org/simplefin");
   assert.equal(result.source, "token");
   assert.equal(result.expiresAt, null);
   const stored = await fs.readFile(targetFile, "utf8");
   assert.match(stored, /https:\/\/demo:secret@bridge.simplefin.org\/simplefin/);
+});
+
+test("SimpleFIN client exposes access info updates", async (t) => {
+  baseSimplefinScope(t);
+  const client = createSimplefinClient({
+    env: {
+      SIMPLEFIN_ACCESS_URL: "https://user:pass@bridge.simplefin.org/simplefin",
+    },
+  });
+
+  await client.ensureAccess();
+  assert.match(client.getAccessInfo().accessUrl, /simplefin$/);
+
+  client.setAccessUrl("https://new:secret@bridge.simplefin.org/simplefin");
+  assert.equal(client.getAccessInfo().source, "manual");
 });

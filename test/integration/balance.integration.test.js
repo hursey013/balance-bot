@@ -3,12 +3,15 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import nock from "nock";
 
 import { createConfig } from "../../src/config.js";
 import createSimplefinClient from "../../src/simplefin.js";
 import createNotifier from "../../src/notifier.js";
 import createStore from "../../src/store.js";
 import createBalanceProcessor from "../../src/balance.js";
+
+nock.disableNetConnect();
 
 const withTempDir = async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "balance-bot-int-"));
@@ -19,6 +22,14 @@ const withTempDir = async (t) => {
 };
 
 test("balance processor integrates simplefin, store, and notifier", async (t) => {
+  t.after(() => {
+    if (!nock.isDone()) {
+      const pending = nock.pendingMocks();
+      nock.cleanAll();
+      throw new Error(`Pending mocks: ${pending.join(", ")}`);
+    }
+  });
+
   const tempDir = await withTempDir(t);
   const stateFile = path.join(tempDir, "state.json");
   const cacheFile = path.join(tempDir, "cache.json");
@@ -40,7 +51,6 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
 
   const config = createConfig({ env });
 
-  const originalFetch = global.fetch;
   const simplefinSnapshots = [
     [
       {
@@ -60,34 +70,21 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
     ],
   ];
 
+  nock("https://bridge.simplefin.org")
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1", account: "acct-1" })
+    .reply(() => [200, { accounts: simplefinSnapshots.shift() ?? [] }])
+    .get("/simplefin/accounts")
+    .query({ "balances-only": "1", account: "acct-1" })
+    .reply(() => [200, { accounts: simplefinSnapshots.shift() ?? [] }]);
+
   const appriseRequests = [];
-
-  global.fetch = async (url, options = {}) => {
-    const stringUrl = String(url);
-    if (stringUrl.includes("bridge.simplefin.org")) {
-      const payload = simplefinSnapshots.shift();
-      return {
-        ok: true,
-        json: async () => ({ accounts: payload ?? [] }),
-      };
-    }
-    if (stringUrl.includes("apprise.local")) {
-      appriseRequests.push({ url: stringUrl, options });
-      return {
-        ok: true,
-        text: async () => "",
-      };
-    }
-    throw new Error(`Unexpected fetch call to ${stringUrl}`);
-  };
-
-  t.after(() => {
-    if (originalFetch) {
-      global.fetch = originalFetch;
-    } else {
-      delete global.fetch;
-    }
-  });
+  nock("http://apprise.local")
+    .post("/notify")
+    .reply(function (uri, body) {
+      appriseRequests.push({ url: `http://apprise.local${uri}`, body });
+      return [200, ""];
+    });
 
   const simplefinClient = createSimplefinClient({
     env,
@@ -96,10 +93,8 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
     cacheTtlMs: config.simplefin.cacheTtlMs,
   });
 
-  if (config.simplefin.accessUrl) {
-    simplefinClient.setAccessUrl(config.simplefin.accessUrl);
-  }
   await simplefinClient.ensureAccess();
+
   const notifier = createNotifier(config.notifier);
   const store = createStore(config.storage.stateFilePath);
   const balanceProcessor = createBalanceProcessor({
@@ -117,10 +112,9 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
 
   const [request] = appriseRequests;
   assert.equal(request.url, "http://apprise.local/notify");
-  const payload = JSON.parse(request.options.body);
-  assert.equal(payload.title, "Balance update");
-  assert(payload.body.includes("👤 Primary"));
-  assert(payload.body.includes("💰 $150.25"));
+  assert.equal(request.body.title, "Balance update");
+  assert(request.body.body.includes("👤 Primary"));
+  assert(request.body.body.includes("💰 $150.25"));
 
   const persistedRaw = await fs.readFile(stateFile, "utf8");
   const persisted = JSON.parse(persistedRaw);

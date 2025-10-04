@@ -1,3 +1,4 @@
+import got from "got";
 import { trimTrailingSlash } from "./utils.js";
 
 /**
@@ -19,16 +20,20 @@ const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
     payload.urls = urls;
   }
 
-  const response = await fetch(appriseApiUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `Apprise notification failed with status ${response.status}: ${text}`,
-    );
+  try {
+    await got.post(appriseApiUrl, {
+      json: payload,
+      retry: { limit: 0 },
+    });
+  } catch (error) {
+    if (error.response) {
+      const { statusCode, body } = error.response;
+      const errorBody = typeof body === "string" ? body : body?.toString?.() ?? "";
+      throw new Error(
+        `Apprise notification failed with status ${statusCode}: ${errorBody}`,
+      );
+    }
+    throw error;
   }
 };
 

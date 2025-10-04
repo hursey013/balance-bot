@@ -1,18 +1,10 @@
-const timestamp = () => new Date().toISOString();
+import pino from "pino";
 
-const log = (level, message, metadata = {}) => {
-  const payload = {
-    level,
-    timestamp: timestamp(),
-    message,
-    ...metadata,
-  };
-  const write = console[level] || console.log;
-  write(JSON.stringify(payload));
-};
+const isTestRun =
+  process.env.NODE_ENV === "test" || typeof process.env.NODE_TEST_CONTEXT === "string";
 
-const info = (message, metadata) => log("info", message, metadata);
-const warn = (message, metadata) => log("warn", message, metadata);
-const error = (message, metadata) => log("error", message, metadata);
+const logger = pino({
+  level: process.env.LOG_LEVEL ?? (isTestRun ? "silent" : "info"),
+});
 
-export default { info, warn, error };
+export default logger;

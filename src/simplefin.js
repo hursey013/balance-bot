@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
-import createJsonFileStore from "./jsonFileStore.js";
+import { Low } from "lowdb";
+import { JSONFile } from "lowdb/node";
+import got from "got";
 import logger from "./logger.js";
 import { trim, uniqueEntries, redactAccessUrl } from "./utils.js";
 
@@ -117,22 +119,25 @@ const writeAccessUrlFile = async (filePath, accessUrl) => {
  * @returns {Promise<{ accessUrl: string, expiresAt: null }>}
  */
 const exchangeSetupToken = async ({ claimUrl }) => {
-  const response = await fetch(claimUrl, { method: "POST" });
-  const responseBody = await response.text();
-  if (!response.ok) {
-    throw new Error(
-      `SimpleFIN token claim failed with status ${response.status}: ${responseBody}`,
-    );
+  try {
+    const { body } = await got.post(claimUrl, { retry: { limit: 0 } });
+    const accessUrl = trim(body);
+    if (!accessUrl) {
+      throw new Error(
+        "SimpleFIN token claim response did not include an access URL",
+      );
+    }
+    return { accessUrl, expiresAt: null };
+  } catch (error) {
+    if (error.response) {
+      const { statusCode, body } = error.response;
+      const errorBody = typeof body === "string" ? body : body?.toString?.() ?? "";
+      throw new Error(
+        `SimpleFIN token claim failed with status ${statusCode}: ${errorBody}`,
+      );
+    }
+    throw error;
   }
-
-  const accessUrl = trim(responseBody);
-  if (!accessUrl) {
-    throw new Error(
-      "SimpleFIN token claim response did not include an access URL",
-    );
-  }
-
-  return { accessUrl, expiresAt: null };
 };
 
 /**
@@ -233,15 +238,21 @@ const createCacheKey = (accountIds) => {
 const createCacheStore = (filePath) => {
   if (!filePath) return null;
 
-  const cacheStore = createJsonFileStore({
-    filePath,
-    defaultData: /** @returns {CacheState} */ () => ({ entries: {} }),
-    autoFlush: true,
-  });
+  const adapter = new JSONFile(filePath);
+  const db = new Low(adapter, { entries: {} });
+  let initialized = false;
+
+  const ensureDb = async () => {
+    if (!initialized) {
+      await db.read();
+      db.data ||= { entries: {} };
+      initialized = true;
+    }
+  };
 
   const get = async (key, maxAgeMs) => {
-    const current = await cacheStore.load();
-    const record = current.entries[key];
+    await ensureDb();
+    const record = db.data.entries[key];
     if (!record) return null;
     if (typeof maxAgeMs === "number" && maxAgeMs > 0) {
       const age = Date.now() - record.timestamp;
@@ -251,12 +262,9 @@ const createCacheStore = (filePath) => {
   };
 
   const set = async (key, value) => {
-    await cacheStore.update((current) => {
-      current.entries[key] = {
-        value,
-        timestamp: Date.now(),
-      };
-    });
+    await ensureDb();
+    db.data.entries[key] = { value, timestamp: Date.now() };
+    await db.write();
   };
 
   return { get, set };
@@ -327,21 +335,25 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
       return cachedAccounts;
     }
 
-    const response = await fetch(requestUrl.toString(), {
-      headers: {
-        Accept: "application/json",
-        ...(authHeader ? { Authorization: authHeader } : {}),
-      },
-    });
-
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(
-        `SimpleFIN request failed with status ${response.status}: ${body}`,
-      );
+    let payload;
+    try {
+      payload = await got(requestUrl.toString(), {
+        headers: {
+          ...(authHeader ? { Authorization: authHeader } : {}),
+        },
+        retry: { limit: 0 },
+      }).json();
+    } catch (error) {
+      if (error.response) {
+        const { statusCode, body } = error.response;
+        const errorBody = typeof body === "string" ? body : body?.toString?.() ?? "";
+        throw new Error(
+          `SimpleFIN request failed with status ${statusCode}: ${errorBody}`,
+        );
+      }
+      throw error;
     }
 
-    const payload = await response.json();
     if (!payload || !Array.isArray(payload.accounts)) {
       throw new Error("Unexpected SimpleFIN response: missing accounts array");
     }

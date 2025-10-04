@@ -1,4 +1,5 @@
-import createJsonFileStore from "./jsonFileStore.js";
+import { Low } from "lowdb";
+import { JSONFile } from "lowdb/node";
 
 /**
  * @typedef {{ accounts: Record<string, { lastBalance: number }> }} BalanceState
@@ -12,27 +13,33 @@ const defaultState = () => ({ accounts: {} });
  * @returns {{ save: () => Promise<void>, getLastBalance: (accountId: string) => Promise<number|null>, setLastBalance: (accountId: string, balance: number) => Promise<void> }}
  */
 const createStore = (filePath) => {
-  const store = createJsonFileStore({
-    filePath,
-    defaultData: /** @returns {BalanceState} */ () => defaultState(),
-    autoFlush: false,
-  });
+  const adapter = new JSONFile(filePath);
+  const db = new Low(adapter, defaultState());
+  let initialized = false;
+
+  const ensureDb = async () => {
+    if (!initialized) {
+      await db.read();
+      db.data ||= defaultState();
+      initialized = true;
+    }
+  };
 
   const getLastBalance = async (accountId) => {
-    const state = await store.load();
-    const entry = state.accounts[accountId];
+    await ensureDb();
+    const entry = db.data.accounts[accountId];
     return typeof entry?.lastBalance === "number" ? entry.lastBalance : null;
   };
 
   const setLastBalance = async (accountId, balance) => {
-    await store.update((state) => {
-      state.accounts[accountId] = { lastBalance: balance };
-    });
-    await store.flush();
+    await ensureDb();
+    db.data.accounts[accountId] = { lastBalance: balance };
+    await db.write();
   };
 
   const save = async () => {
-    await store.flush();
+    await ensureDb();
+    await db.write();
   };
 
   return { save, getLastBalance, setLastBalance };

@@ -50,15 +50,7 @@ const formatCurrency = (amount, currency) => {
   }
 };
 
-const uniqueEntries = (items) => {
-  const result = [];
-  for (const item of items) {
-    if (!result.includes(item)) {
-      result.push(item);
-    }
-  }
-  return result;
-};
+const uniqueEntries = (items) => Array.from(new Set(items));
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 
@@ -79,41 +71,6 @@ const redactAccessUrl = (value) => {
   }
 };
 
-const requestJson = async ({
-  url,
-  method = "GET",
-  headers,
-  json,
-  body,
-  errorContext,
-}) => {
-  const init = {
-    method,
-    headers: {
-      Accept: "application/json",
-      ...(headers ?? {}),
-    },
-  };
-
-  if (json !== undefined) {
-    init.headers["Content-Type"] = "application/json";
-    init.body = JSON.stringify(json);
-  } else if (body !== undefined) {
-    init.body = body;
-  }
-
-  const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const contextMessage = errorContext ?? `Request for ${url}`;
-    throw new Error(
-      `${contextMessage} failed with status ${response.status}: ${body}`,
-    );
-  }
-
-  return response.json();
-};
-
 export {
   trim,
   normalizeCacheTtl,
@@ -123,5 +80,4 @@ export {
   uniqueEntries,
   trimTrailingSlash,
   redactAccessUrl,
-  requestJson,
 };
