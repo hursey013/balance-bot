@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img alt="Balance Bot logo" src="balance-bot-logo.svg" width="160" height="160">
+    <img alt="Balance-Bot logo" src="logo.svg" width="160" height="160">
   </picture>
 </p>
 
