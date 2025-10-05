@@ -1,13 +1,13 @@
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import logger from "./logger.js";
-import { trim, normalizeCacheTtl } from "./utils.js";
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import logger from './logger.js';
+import { trim, normalizeCacheTtl } from './utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PROJECT_ROOT = path.resolve(__dirname, "../../..");
+const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 
 /**
  * Perform a deep clone of supported JSON data structures.
@@ -15,27 +15,26 @@ const PROJECT_ROOT = path.resolve(__dirname, "../../..");
  * @param {T} value
  * @returns {T}
  */
-const clone = (value) => structuredClone(value);
+const clone = value => structuredClone(value);
 
 /**
  * Normalize notification targets by trimming identifiers and removing duplicates.
  * @param {Array<Record<string, any>>|undefined} targets
  * @returns {Array<Record<string, any>>}
  */
-const sanitizeTargets = (targets) => {
+const sanitizeTargets = targets => {
   if (!Array.isArray(targets)) return [];
-  return targets.map((target) => {
-    const accountIds = Array.isArray(target.accountIds)
-      ? Array.from(new Set(target.accountIds.map((id) => trim(id)).filter(Boolean)))
-      : [];
-    const appriseUrls = Array.isArray(target.appriseUrls)
-      ? Array.from(new Set(target.appriseUrls.map((url) => trim(url)).filter(Boolean)))
-      : [];
-    const appriseConfigKey = target.appriseConfigKey
-      ? trim(target.appriseConfigKey)
-      : "";
-    const name =
-      typeof target.name === "string" ? target.name.trim() : target.name;
+  const uniqueTrimmed = items => {
+    if (!Array.isArray(items)) return [];
+    const trimmedItems = items.map(value => trim(value)).filter(Boolean);
+    return Array.from(new Set(trimmedItems));
+  };
+
+  return targets.map(target => {
+    const accountIds = uniqueTrimmed(target.accountIds);
+    const appriseUrls = uniqueTrimmed(target.appriseUrls);
+    const appriseConfigKey = target.appriseConfigKey ? trim(target.appriseConfigKey) : '';
+    const name = typeof target.name === 'string' ? target.name.trim() : target.name;
 
     const sanitized = {
       ...target,
@@ -70,15 +69,15 @@ const resolveDataDir = () => {
       ? path.resolve(configured)
       : path.resolve(PROJECT_ROOT, configured);
   }
-  return path.join(PROJECT_ROOT, "data");
+  return path.join(PROJECT_ROOT, 'data');
 };
 
 const DEFAULT_DATA_DIR = resolveDataDir();
-const DEFAULT_STATE_FILE = path.join(DEFAULT_DATA_DIR, "state.json");
-const DEFAULT_CACHE_FILE = path.join(DEFAULT_DATA_DIR, "cache.json");
-const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, "config.json");
-const DEFAULT_APPRISE_URL = "http://apprise:8000/notify";
-const DEFAULT_CRON = "0 * * * *";
+const DEFAULT_STATE_FILE = path.join(DEFAULT_DATA_DIR, 'state.json');
+const DEFAULT_CACHE_FILE = path.join(DEFAULT_DATA_DIR, 'cache.json');
+const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, 'config.json');
+const DEFAULT_APPRISE_URL = 'http://apprise:8000/notify';
+const DEFAULT_CRON = '0 * * * *';
 
 /**
  * Resolve a config path relative to the data directory when needed.
@@ -102,8 +101,8 @@ const resolvePath = (value, fallback) => {
  */
 const defaultConfigTemplate = ({ filePath }) => ({
   simplefin: {
-    accessUrl: "",
-    cacheFilePath: "cache.json",
+    accessUrl: '',
+    cacheFilePath: 'cache.json',
     cacheTtlMs: 60 * 60 * 1000,
   },
   notifier: {
@@ -116,7 +115,7 @@ const defaultConfigTemplate = ({ filePath }) => ({
     cronExpression: DEFAULT_CRON,
   },
   storage: {
-    stateFilePath: "state.json",
+    stateFilePath: 'state.json',
   },
   metadata: {
     filePath,
@@ -168,7 +167,7 @@ const applyDefaults = (persisted = {}, { filePath }) => {
  * Produce a runtime configuration object ready for the application to consume.
  * @param {{ persisted?: Record<string, any> }} [options]
  * @returns {BalanceBotConfig}
-*/
+ */
 export const createConfig = ({ persisted = {} } = {}) => {
   const merged = applyDefaults(persisted, { filePath: DEFAULT_CONFIG_FILE });
 
@@ -177,10 +176,7 @@ export const createConfig = ({ persisted = {} } = {}) => {
   return {
     simplefin: {
       accessUrl: trim(merged.simplefin.accessUrl),
-      cacheFilePath: resolvePath(
-        merged.simplefin.cacheFilePath,
-        DEFAULT_CACHE_FILE,
-      ),
+      cacheFilePath: resolvePath(merged.simplefin.cacheFilePath, DEFAULT_CACHE_FILE),
       cacheTtlMs,
     },
     notifier: {
@@ -193,10 +189,7 @@ export const createConfig = ({ persisted = {} } = {}) => {
       cronExpression: trim(merged.polling.cronExpression) || DEFAULT_CRON,
     },
     storage: {
-      stateFilePath: resolvePath(
-        merged.storage.stateFilePath,
-        DEFAULT_STATE_FILE,
-      ),
+      stateFilePath: resolvePath(merged.storage.stateFilePath, DEFAULT_STATE_FILE),
     },
     metadata: {
       filePath: resolvePath(merged.metadata.filePath, DEFAULT_CONFIG_FILE),
@@ -224,7 +217,7 @@ const atomicWriteJson = async (filePath, data) => {
  * Persistent configuration manager backed by a JSON file.
  */
 class ConfigStore {
-  constructor({ filePath = path.join(DEFAULT_DATA_DIR, "config.json") } = {}) {
+  constructor({ filePath = path.join(DEFAULT_DATA_DIR, 'config.json') } = {}) {
     this.filePath = path.resolve(filePath);
     this._pending = Promise.resolve();
   }
@@ -235,11 +228,11 @@ class ConfigStore {
    */
   async _read() {
     try {
-      const content = await fs.readFile(this.filePath, "utf8");
+      const content = await fs.readFile(this.filePath, 'utf8');
       const parsed = JSON.parse(content);
       return applyDefaults(parsed, { filePath: this.filePath });
     } catch (error) {
-      if (error.code === "ENOENT") {
+      if (error.code === 'ENOENT') {
         return defaultConfigTemplate({ filePath: this.filePath });
       }
       throw error;
@@ -253,11 +246,9 @@ class ConfigStore {
    */
   async _write(data) {
     const payload = clone(data);
-    payload.notifications.targets = sanitizeTargets(
-      payload.notifications.targets,
-    );
+    payload.notifications.targets = sanitizeTargets(payload.notifications.targets);
     await atomicWriteJson(this.filePath, payload);
-    logger.info("Persisted configuration", { filePath: this.filePath });
+    logger.info('Persisted configuration', { filePath: this.filePath });
   }
 
   /**
@@ -294,10 +285,10 @@ class ConfigStore {
   async setSimplefinAccess(accessUrl) {
     const trimmed = trim(accessUrl);
     if (!trimmed) {
-      throw new Error("Access URL must be provided");
+      throw new Error('Access URL must be provided');
     }
 
-    return this.update(async (current) => ({
+    return this.update(async current => ({
       ...current,
       simplefin: {
         ...current.simplefin,
@@ -312,7 +303,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setAppriseApiUrl(appriseApiUrl) {
-    return this.update(async (current) => ({
+    return this.update(async current => ({
       ...current,
       notifier: {
         ...current.notifier,
@@ -327,7 +318,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setCronExpression(cronExpression) {
-    return this.update(async (current) => ({
+    return this.update(async current => ({
       ...current,
       polling: {
         ...current.polling,
@@ -342,7 +333,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setNotificationTargets(targets) {
-    return this.update(async (current) => ({
+    return this.update(async current => ({
       ...current,
       notifications: {
         ...current.notifications,
@@ -357,7 +348,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setConfig({ appriseApiUrl, cronExpression, targets }) {
-    return this.update(async (current) => ({
+    return this.update(async current => ({
       ...current,
       notifier: {
         ...current.notifier,

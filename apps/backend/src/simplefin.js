@@ -1,28 +1,27 @@
-import { Low } from "lowdb";
-import { JSONFile } from "lowdb/node";
-import got from "got";
-import logger from "./logger.js";
-import { trim, uniqueEntries } from "./utils.js";
+import { Low } from 'lowdb';
+import { JSONFile } from 'lowdb/node';
+import got from 'got';
+import { trim, uniqueEntries } from './utils.js';
 
 /**
  * Decode a SimpleFIN setup token and extract its claim URL.
  * @param {string|undefined} value
  * @returns {{ token: string, claimUrl: string }}
  */
-const decodeSetupToken = (value) => {
+const decodeSetupToken = value => {
   const trimmed = trim(value);
-  if (!trimmed) return { token: "", claimUrl: "" };
+  if (!trimmed) return { token: '', claimUrl: '' };
 
-  const normalized = trimmed.replace(/-/g, "+").replace(/_/g, "/");
+  const normalized = trimmed.replace(/-/g, '+').replace(/_/g, '/');
   const padding =
-    normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
 
   let decoded;
   try {
-    decoded = Buffer.from(`${normalized}${padding}`, "base64").toString("utf8");
+    decoded = Buffer.from(`${normalized}${padding}`, 'base64').toString('utf8');
   } catch (error) {
     throw new Error(
-      `Invalid SimpleFIN setup token: ${error.message ?? "unable to decode base64"}`,
+      `Invalid SimpleFIN setup token: ${error.message ?? 'unable to decode base64'}`,
     );
   }
 
@@ -30,13 +29,11 @@ const decodeSetupToken = (value) => {
   try {
     claimUrl = new URL(decoded);
   } catch (error) {
-    throw new Error(
-      `SimpleFIN setup token decoded to an invalid URL: ${error.message}`,
-    );
+    throw new Error(`SimpleFIN setup token decoded to an invalid URL: ${error.message}`);
   }
 
-  if (claimUrl.protocol !== "https:") {
-    throw new Error("SimpleFIN claim URL must use HTTPS");
+  if (claimUrl.protocol !== 'https:') {
+    throw new Error('SimpleFIN claim URL must use HTTPS');
   }
 
   return { token: trimmed, claimUrl: claimUrl.toString() };
@@ -52,16 +49,13 @@ const exchangeSetupToken = async ({ claimUrl }) => {
     const { body } = await got.post(claimUrl, { retry: { limit: 0 } });
     const accessUrl = trim(body);
     if (!accessUrl) {
-      throw new Error(
-        "SimpleFIN token claim response did not include an access URL",
-      );
+      throw new Error('SimpleFIN token claim response did not include an access URL');
     }
     return { accessUrl, expiresAt: null };
   } catch (error) {
     if (error.response) {
       const { statusCode, body } = error.response;
-      const errorBody =
-        typeof body === "string" ? body : (body?.toString?.() ?? "");
+      const errorBody = typeof body === 'string' ? body : (body?.toString?.() ?? '');
       throw new Error(
         `SimpleFIN token claim failed with status ${statusCode}: ${errorBody}`,
       );
@@ -75,14 +69,13 @@ const exchangeSetupToken = async ({ claimUrl }) => {
  * @param {string[]|undefined} accountIds
  * @returns {string}
  */
-const createCacheKey = (accountIds) => {
-  if (!Array.isArray(accountIds) || accountIds.length === 0)
-    return "accounts:all";
-  const cleanedIds = accountIds.map((id) => `${id}`.trim()).filter(Boolean);
+const createCacheKey = accountIds => {
+  if (!Array.isArray(accountIds) || accountIds.length === 0) return 'accounts:all';
+  const cleanedIds = accountIds.map(id => `${id}`.trim()).filter(Boolean);
   const uniqueSortedIds = uniqueEntries(cleanedIds).sort();
   return uniqueSortedIds.length
-    ? `accounts:${uniqueSortedIds.join(",")}`
-    : "accounts:all";
+    ? `accounts:${uniqueSortedIds.join(',')}`
+    : 'accounts:all';
 };
 
 /**
@@ -94,7 +87,7 @@ const createCacheKey = (accountIds) => {
  * @param {string|undefined} filePath
  * @returns {{ get: (key: string, maxAgeMs?: number) => Promise<any>, set: (key: string, value: any) => Promise<void> }|null}
  */
-const createCacheStore = (filePath) => {
+const createCacheStore = filePath => {
   if (!filePath) return null;
 
   const adapter = new JSONFile(filePath);
@@ -113,7 +106,7 @@ const createCacheStore = (filePath) => {
     await ensureDb();
     const record = db.data.entries[key];
     if (!record) return null;
-    if (typeof maxAgeMs === "number" && maxAgeMs > 0) {
+    if (typeof maxAgeMs === 'number' && maxAgeMs > 0) {
       const age = Date.now() - record.timestamp;
       if (age > maxAgeMs) return null;
     }
@@ -136,7 +129,7 @@ const createCacheStore = (filePath) => {
  */
 const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
   if (!accessUrl) {
-    throw new Error("SimpleFIN access URL is required");
+    throw new Error('SimpleFIN access URL is required');
   }
 
   let access;
@@ -146,26 +139,26 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     throw new Error(`Invalid SimpleFIN access URL: ${error.message}`);
   }
 
-  const username = access.username ? decodeURIComponent(access.username) : "";
-  const password = access.password ? decodeURIComponent(access.password) : "";
+  const username = access.username ? decodeURIComponent(access.username) : '';
+  const password = access.password ? decodeURIComponent(access.password) : '';
   const hasCredentials = username || password;
   const authHeader = hasCredentials
-    ? `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+    ? `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
     : null;
   if (hasCredentials) {
-    access.username = "";
-    access.password = "";
+    access.username = '';
+    access.password = '';
   }
 
-  if (!access.pathname.endsWith("/accounts")) {
-    const trimmedPath = access.pathname.replace(/\/$/, "");
+  if (!access.pathname.endsWith('/accounts')) {
+    const trimmedPath = access.pathname.replace(/\/$/, '');
     access.pathname = `${trimmedPath}/accounts`;
   }
 
   const baseUrl = access.toString();
   const cache = cacheTtlMs > 0 ? createCacheStore(cacheFilePath) : null;
 
-  const readFromCache = async (key) => {
+  const readFromCache = async key => {
     if (!cache) return null;
     return cache.get(key, cacheTtlMs);
   };
@@ -177,14 +170,14 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
 
   const fetchAccounts = async ({ accountIds } = {}) => {
     const requestUrl = new URL(baseUrl);
-    requestUrl.searchParams.set("balances-only", "1");
+    requestUrl.searchParams.set('balances-only', '1');
 
     if (Array.isArray(accountIds) && accountIds.length) {
       const uniqueIds = uniqueEntries(
-        accountIds.map((id) => `${id}`.trim()).filter(Boolean),
+        accountIds.map(id => `${id}`.trim()).filter(Boolean),
       );
       for (const id of uniqueIds) {
-        requestUrl.searchParams.append("account", id);
+        requestUrl.searchParams.append('account', id);
       }
     }
 
@@ -205,8 +198,7 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     } catch (error) {
       if (error.response) {
         const { statusCode, body } = error.response;
-        const errorBody =
-          typeof body === "string" ? body : (body?.toString?.() ?? "");
+        const errorBody = typeof body === 'string' ? body : (body?.toString?.() ?? '');
         throw new Error(
           `SimpleFIN request failed with status ${statusCode}: ${errorBody}`,
         );
@@ -215,7 +207,7 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     }
 
     if (!payload || !Array.isArray(payload.accounts)) {
-      throw new Error("Unexpected SimpleFIN response: missing accounts array");
+      throw new Error('Unexpected SimpleFIN response: missing accounts array');
     }
 
     await writeToCache(cacheKey, payload.accounts);
@@ -231,17 +223,13 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
  * @param {{ accessUrl?: string, cacheFilePath?: string, cacheTtlMs?: number }} [options]
  * @returns {{ fetchAccounts: (options?: { accountIds?: string[] }) => Promise<any[]>, getAccessInfo: () => any, setAccessUrl: (accessUrl: string) => void }}
  */
-const createSimplefinClient = ({
-  accessUrl,
-  cacheFilePath,
-  cacheTtlMs = 0,
-} = {}) => {
+const createSimplefinClient = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 } = {}) => {
   let currentAccessUrl = trim(accessUrl);
   let apiInstance = null;
 
   const getApi = () => {
     if (!currentAccessUrl) {
-      throw new Error("SimpleFIN access URL is required");
+      throw new Error('SimpleFIN access URL is required');
     }
 
     if (!apiInstance || apiInstance.accessUrl !== currentAccessUrl) {
@@ -271,7 +259,7 @@ const createSimplefinClient = ({
     currentAccessUrl
       ? {
           accessUrl: currentAccessUrl,
-          source: "manual",
+          source: 'manual',
           expiresAt: null,
         }
       : null;
@@ -281,10 +269,10 @@ const createSimplefinClient = ({
    * @param {string} nextAccessUrl
    * @returns {void}
    */
-  const setAccessUrl = (nextAccessUrl) => {
+  const setAccessUrl = nextAccessUrl => {
     const trimmed = trim(nextAccessUrl);
     if (!trimmed) {
-      throw new Error("Access URL must be a non-empty string");
+      throw new Error('Access URL must be a non-empty string');
     }
     currentAccessUrl = trimmed;
     apiInstance = null;
@@ -297,10 +285,6 @@ const createSimplefinClient = ({
   };
 };
 
-export {
-  decodeSetupToken,
-  exchangeSetupToken,
-  createSimplefinApi,
-};
+export { decodeSetupToken, exchangeSetupToken, createSimplefinApi };
 
 export default createSimplefinClient;

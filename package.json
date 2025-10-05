@@ -11,5 +11,13 @@
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^15.11.0",
+    "prettier": "^3.3.3"
   }
 }

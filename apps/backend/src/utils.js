@@ -3,14 +3,14 @@
  * @param {unknown} value
  * @returns {string}
  */
-const trim = (value) => value?.toString?.().trim?.() ?? "";
+const trim = value => value?.toString?.().trim?.() ?? '';
 
 /**
  * Normalize a cache TTL value in milliseconds, falling back to one hour.
  * @param {unknown} value
  * @returns {number}
  */
-const normalizeCacheTtl = (value) => {
+const normalizeCacheTtl = value => {
   const defaultTtl = 60 * 60 * 1000;
   if (value === undefined) {
     return defaultTtl;
@@ -27,9 +27,9 @@ const normalizeCacheTtl = (value) => {
  * @param {unknown} value
  * @returns {number|null}
  */
-const parseNumeric = (value) => {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
+const parseNumeric = value => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -41,10 +41,10 @@ const parseNumeric = (value) => {
  * @param {Record<string, any>|undefined|null} account
  * @returns {{ amount: number, currency: string }|null}
  */
-const resolveBalanceInfo = (account) => {
+const resolveBalanceInfo = account => {
   if (!account) return null;
 
-  const availableAmount = parseNumeric(account["available-balance"]);
+  const availableAmount = parseNumeric(account['available-balance']);
   const balanceAmount = parseNumeric(account.balance);
   const amount = availableAmount ?? balanceAmount;
 
@@ -52,7 +52,7 @@ const resolveBalanceInfo = (account) => {
     return null;
   }
 
-  const currency = account.currency || "USD";
+  const currency = account.currency || 'USD';
   return { amount, currency };
 };
 
@@ -64,11 +64,11 @@ const resolveBalanceInfo = (account) => {
  */
 const formatCurrency = (amount, currency) => {
   if (!Number.isFinite(amount)) {
-    return `${amount ?? "0"} ${currency}`;
+    return `${amount ?? '0'} ${currency}`;
   }
   try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
       currency,
     }).format(amount);
   } catch {
@@ -82,34 +82,34 @@ const formatCurrency = (amount, currency) => {
  * @param {T[]} items
  * @returns {T[]}
  */
-const uniqueEntries = (items) => Array.from(new Set(items));
+const uniqueEntries = items => Array.from(new Set(items));
 
 /**
  * Remove trailing forward slashes from a URL-like string.
  * @param {string} [value=""]
  * @returns {string}
  */
-const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
+const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
 /**
  * Redact credentials from a URL while keeping it human-readable.
  * @param {string} value
  * @returns {string}
  */
-const redactAccessUrl = (value) => {
+const redactAccessUrl = value => {
   const trimmed = trim(value);
-  if (!trimmed) return "";
+  if (!trimmed) return '';
   try {
     const parsed = new URL(trimmed);
     if (parsed.username) {
-      parsed.username = "****";
+      parsed.username = '****';
     }
     if (parsed.password) {
-      parsed.password = "****";
+      parsed.password = '****';
     }
     return parsed.toString();
   } catch {
-    return "(redacted)";
+    return '(redacted)';
   }
 };
 

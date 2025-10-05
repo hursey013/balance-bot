@@ -1,10 +1,10 @@
-import cron from "node-cron";
-import logger from "./logger.js";
-import createSimplefinClient from "./simplefin.js";
-import createNotifier from "./notifier.js";
-import createStore from "./store.js";
-import { resolveBalanceInfo, formatCurrency, uniqueEntries } from "./utils.js";
-import { createConfig, ConfigStore } from "./config.js";
+import cron from 'node-cron';
+import logger from './logger.js';
+import createSimplefinClient from './simplefin.js';
+import createNotifier from './notifier.js';
+import createStore from './store.js';
+import { resolveBalanceInfo, formatCurrency, uniqueEntries } from './utils.js';
+import { createConfig, ConfigStore } from './config.js';
 
 /**
  * Coordinates SimpleFIN balances, persistence, and notifications for one run.
@@ -21,17 +21,16 @@ class BalanceMonitor {
       : [];
     this.targets = targets;
 
-    const accountIds = targets.flatMap((target) =>
+    const accountIds = targets.flatMap(target =>
       Array.isArray(target.accountIds) ? target.accountIds : [],
     );
 
-    this.explicitAccountIds = uniqueEntries(
-      accountIds.filter((id) => id && id !== "*"),
-    );
-    this.hasWildcardTargets = accountIds.includes("*");
-    this.wildcardTargetCount = targets.filter((target) =>
-      Array.isArray(target.accountIds) ? target.accountIds.includes("*") : false,
-    ).length;
+    this.explicitAccountIds = uniqueEntries(accountIds.filter(id => id && id !== '*'));
+    this.hasWildcardTargets = accountIds.includes('*');
+    this.wildcardTargetCount = targets.filter(target => {
+      if (!Array.isArray(target.accountIds)) return false;
+      return target.accountIds.includes('*');
+    }).length;
 
     this.running = false;
     this.summary = Object.freeze({
@@ -55,19 +54,17 @@ class BalanceMonitor {
    */
   async runOnce() {
     if (this.running) {
-      this.log.warn(
-        "Skipping balance check because the previous run is still running",
-      );
+      this.log.warn('Skipping balance check because the previous run is still running');
       return false;
     }
 
     this.running = true;
-    this.log.info("Balance check started");
+    this.log.info('Balance check started');
 
     try {
       const accounts = await this.#fetchAccounts();
       if (!Array.isArray(accounts) || !accounts.length) {
-        this.log.warn("SimpleFIN returned no accounts");
+        this.log.warn('SimpleFIN returned no accounts');
         return false;
       }
 
@@ -75,7 +72,7 @@ class BalanceMonitor {
         try {
           await this.#processAccount(account);
         } catch (error) {
-          this.log.error("Failed to process account", {
+          this.log.error('Failed to process account', {
             accountId: account?.id,
             error: error.message,
           });
@@ -84,7 +81,7 @@ class BalanceMonitor {
 
       return true;
     } finally {
-      this.log.info("Balance check finished");
+      this.log.info('Balance check finished');
       this.running = false;
     }
   }
@@ -101,7 +98,7 @@ class BalanceMonitor {
   /** @private */
   async #processAccount(account) {
     if (!account?.id) {
-      this.log.warn("Skipping account without id");
+      this.log.warn('Skipping account without id');
       return;
     }
 
@@ -112,7 +109,7 @@ class BalanceMonitor {
 
     const balanceInfo = resolveBalanceInfo(account);
     if (!balanceInfo) {
-      this.log.warn("Could not resolve account balance", {
+      this.log.warn('Could not resolve account balance', {
         accountId: account.id,
       });
       return;
@@ -123,7 +120,7 @@ class BalanceMonitor {
 
     if (previousBalance === null) {
       await this.stateStore.setLastBalance(account.id, currentBalance);
-      this.log.info("Stored baseline balance", {
+      this.log.info('Stored baseline balance', {
         accountId: account.id,
         accountName: account.name || account.id,
         balance: currentBalance,
@@ -142,30 +139,30 @@ class BalanceMonitor {
     const accountName = account.name || account.nickname || account.id;
     const formattedBalance = formatCurrency(currentBalance, currency);
     const formattedDelta = formatCurrency(Math.abs(delta), currency);
-    const signedDelta = `${delta > 0 ? "+" : "-"}${formattedDelta}`;
-    const deltaColor = delta > 0 ? "#007700" : "#B00000";
-    const trendEmoji = delta > 0 ? "📈" : "📉";
+    const signedDelta = `${delta > 0 ? '+' : '-'}${formattedDelta}`;
+    const deltaColor = delta > 0 ? '#007700' : '#B00000';
+    const trendEmoji = delta > 0 ? '📈' : '📉';
 
     for (const target of targets) {
       const body = [
         `👤 ${accountName}`,
         `${trendEmoji} <font color="${deltaColor}">${signedDelta}</font>`,
         `💰 ${formattedBalance}`,
-      ].join("<br>");
+      ].join('<br>');
 
       await this.notifier.sendNotification({
-        title: "Balance update",
+        title: 'Balance update',
         body,
         urls: target.appriseUrls,
         configKey: target.appriseConfigKey,
       });
 
-      this.log.info("Sent balance update", {
+      this.log.info('Sent balance update', {
         accountId: account.id,
         accountName,
         delta,
         newBalance: currentBalance,
-        target: target.name || "unnamed",
+        target: target.name || 'unnamed',
       });
     }
 
@@ -174,11 +171,9 @@ class BalanceMonitor {
 
   /** @private */
   #selectTargets(accountId) {
-    return this.targets.filter((target) => {
+    return this.targets.filter(target => {
       if (!Array.isArray(target.accountIds)) return false;
-      return (
-        target.accountIds.includes(accountId) || target.accountIds.includes("*")
-      );
+      return target.accountIds.includes(accountId) || target.accountIds.includes('*');
     });
   }
 }
@@ -213,9 +208,7 @@ class BalanceBotService {
     const config = createConfig({ persisted });
 
     if (!config.simplefin.accessUrl) {
-      logger.warn(
-        "SimpleFIN access URL not configured yet. Waiting for onboarding.",
-      );
+      logger.warn('SimpleFIN access URL not configured yet. Waiting for onboarding.');
       await this._teardown();
       return;
     }
@@ -240,7 +233,7 @@ class BalanceBotService {
 
     if (!config.notifications.targets.length) {
       logger.warn(
-        "No notification targets configured. Balance changes will not be sent anywhere.",
+        'No notification targets configured. Balance changes will not be sent anywhere.',
       );
     }
 
@@ -249,14 +242,14 @@ class BalanceBotService {
       throw new Error(`Invalid cron expression: ${schedule}`);
     }
 
-    logger.info("Starting balance monitor", {
+    logger.info('Starting balance monitor', {
       schedule,
       ...this.balanceMonitor.summary,
     });
 
     const queueCheck = () =>
-      this.balanceMonitor.runOnce().catch((error) => {
-        logger.error("Balance check failed", { error: error.message });
+      this.balanceMonitor.runOnce().catch(error => {
+        logger.error('Balance check failed', { error: error.message });
       });
 
     this.task = cron.schedule(schedule, queueCheck, { scheduled: false });
@@ -270,7 +263,7 @@ class BalanceBotService {
    */
   async fetchAccounts() {
     if (!this.simplefinClient) {
-      throw new Error("SimpleFIN is not configured yet");
+      throw new Error('SimpleFIN is not configured yet');
     }
     return this.simplefinClient.fetchAccounts();
   }
@@ -289,7 +282,7 @@ class BalanceBotService {
       try {
         await this.stateStore.save();
       } catch (error) {
-        logger.error("Failed to persist state during shutdown", {
+        logger.error('Failed to persist state during shutdown', {
           error: error.message,
         });
       }
