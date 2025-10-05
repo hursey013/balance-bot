@@ -3,8 +3,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import logger from "./logger.js";
-import ConfigStore from "./config-store.js";
-import BalanceBotService from "./balance-bot-service.js";
+import BalanceBotService, { ConfigStore } from "./index.js";
 import { decodeSetupToken, exchangeSetupToken } from "./simplefin.js";
 import { trim, redactAccessUrl } from "./utils.js";
 
@@ -13,6 +12,10 @@ const __dirname = path.dirname(__filename);
 
 const FRONTEND_DIST_PATH = path.resolve(__dirname, "../../frontend/dist");
 
+/**
+ * Assemble the Express application and boot the polling service.
+ * @returns {Promise<{ app: import("express").Express, botService: import("./index.js").default }>}
+ */
 const createApp = async () => {
   const app = express();
   app.use(cors());
@@ -137,6 +140,10 @@ const createApp = async () => {
   return { app, botService };
 };
 
+/**
+ * Launch the HTTP server and wire graceful shutdown handlers.
+ * @returns {Promise<void>}
+ */
 const start = async () => {
   const { app, botService } = await createApp();
   const port = process.env.PORT ? Number(process.env.PORT) : 4000;

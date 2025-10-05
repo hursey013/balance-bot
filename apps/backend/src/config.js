@@ -1,5 +1,8 @@
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import logger from "./logger.js";
 import { trim, normalizeCacheTtl } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -7,27 +10,26 @@ const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, "../../..");
 
 /**
- * @typedef {object} BalanceBotConfig
- * @property {{ accessUrl: string, cacheFilePath: string, cacheTtlMs: number }} simplefin
- * @property {{ cronExpression: string }} polling
- * @property {{ appriseApiUrl: string }} notifier
- * @property {{ targets: Array<Record<string, any>> }} notifications
- * @property {{ stateFilePath: string }} storage
- * @property {{ filePath: string }} metadata
+ * Perform a deep clone of supported JSON data structures.
+ * @template T
+ * @param {T} value
+ * @returns {T}
  */
+const clone = (value) => structuredClone(value);
 
+/**
+ * Normalize notification targets by trimming identifiers and removing duplicates.
+ * @param {Array<Record<string, any>>|undefined} targets
+ * @returns {Array<Record<string, any>>}
+ */
 const sanitizeTargets = (targets) => {
   if (!Array.isArray(targets)) return [];
   return targets.map((target) => {
     const accountIds = Array.isArray(target.accountIds)
-      ? Array.from(
-          new Set(target.accountIds.map((id) => trim(id)).filter(Boolean)),
-        )
+      ? Array.from(new Set(target.accountIds.map((id) => trim(id)).filter(Boolean)))
       : [];
     const appriseUrls = Array.isArray(target.appriseUrls)
-      ? Array.from(
-          new Set(target.appriseUrls.map((url) => trim(url)).filter(Boolean)),
-        )
+      ? Array.from(new Set(target.appriseUrls.map((url) => trim(url)).filter(Boolean)))
       : [];
     const appriseConfigKey = target.appriseConfigKey
       ? trim(target.appriseConfigKey)
@@ -57,6 +59,10 @@ const sanitizeTargets = (targets) => {
   });
 };
 
+/**
+ * Resolve the base data directory, honoring BALANCE_BOT_DATA_DIR when provided.
+ * @returns {string}
+ */
 const resolveDataDir = () => {
   const configured = trim(process.env.BALANCE_BOT_DATA_DIR);
   if (configured) {
@@ -74,6 +80,12 @@ const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, "config.json");
 const DEFAULT_APPRISE_URL = "http://apprise:8000/notify";
 const DEFAULT_CRON = "0 * * * *";
 
+/**
+ * Resolve a config path relative to the data directory when needed.
+ * @param {string|undefined} value
+ * @param {string} fallback
+ * @returns {string}
+ */
 const resolvePath = (value, fallback) => {
   const trimmed = trim(value);
   if (!trimmed) return fallback;
@@ -83,44 +95,288 @@ const resolvePath = (value, fallback) => {
   return path.join(DEFAULT_DATA_DIR, trimmed);
 };
 
+/**
+ * Provide the default configuration object written to disk on first run.
+ * @param {{ filePath: string }} params
+ * @returns {Record<string, any>}
+ */
+const defaultConfigTemplate = ({ filePath }) => ({
+  simplefin: {
+    accessUrl: "",
+    cacheFilePath: "cache.json",
+    cacheTtlMs: 60 * 60 * 1000,
+  },
+  notifier: {
+    appriseApiUrl: DEFAULT_APPRISE_URL,
+  },
+  notifications: {
+    targets: [],
+  },
+  polling: {
+    cronExpression: DEFAULT_CRON,
+  },
+  storage: {
+    stateFilePath: "state.json",
+  },
+  metadata: {
+    filePath,
+  },
+});
+
+/**
+ * Merge persisted configuration with defaults, ensuring nested structures exist.
+ * @param {Record<string, any>|undefined} persisted
+ * @param {{ filePath: string }} context
+ * @returns {Record<string, any>}
+ */
+const applyDefaults = (persisted = {}, { filePath }) => {
+  const defaults = defaultConfigTemplate({ filePath });
+  const merged = {
+    ...defaults,
+    ...persisted,
+    simplefin: {
+      ...defaults.simplefin,
+      ...(persisted.simplefin ?? {}),
+    },
+    notifier: {
+      ...defaults.notifier,
+      ...(persisted.notifier ?? {}),
+    },
+    notifications: {
+      ...defaults.notifications,
+      ...(persisted.notifications ?? {}),
+    },
+    polling: {
+      ...defaults.polling,
+      ...(persisted.polling ?? {}),
+    },
+    storage: {
+      ...defaults.storage,
+      ...(persisted.storage ?? {}),
+    },
+    metadata: {
+      ...defaults.metadata,
+      ...(persisted.metadata ?? {}),
+    },
+  };
+
+  merged.notifications.targets = sanitizeTargets(merged.notifications.targets);
+  return merged;
+};
+
+/**
+ * Produce a runtime configuration object ready for the application to consume.
+ * @param {{ persisted?: Record<string, any> }} [options]
+ * @returns {BalanceBotConfig}
+*/
 export const createConfig = ({ persisted = {} } = {}) => {
-  const simplefin = persisted.simplefin ?? {};
-  const notifier = persisted.notifier ?? {};
-  const notifications = persisted.notifications ?? {};
-  const polling = persisted.polling ?? {};
-  const storage = persisted.storage ?? {};
-  const metadata = persisted.metadata ?? {};
+  const merged = applyDefaults(persisted, { filePath: DEFAULT_CONFIG_FILE });
 
-  const targets = sanitizeTargets(notifications.targets) ?? [];
-
-  const cacheTtlMs = normalizeCacheTtl(simplefin.cacheTtlMs);
+  const cacheTtlMs = normalizeCacheTtl(merged.simplefin.cacheTtlMs);
 
   return {
     simplefin: {
-      accessUrl: trim(simplefin.accessUrl),
-      cacheFilePath: resolvePath(simplefin.cacheFilePath, DEFAULT_CACHE_FILE),
+      accessUrl: trim(merged.simplefin.accessUrl),
+      cacheFilePath: resolvePath(
+        merged.simplefin.cacheFilePath,
+        DEFAULT_CACHE_FILE,
+      ),
       cacheTtlMs,
     },
     notifier: {
-      appriseApiUrl: trim(notifier.appriseApiUrl) || DEFAULT_APPRISE_URL,
+      appriseApiUrl: trim(merged.notifier.appriseApiUrl) || DEFAULT_APPRISE_URL,
     },
     notifications: {
-      targets,
+      targets: merged.notifications.targets,
     },
     polling: {
-      cronExpression: trim(polling.cronExpression) || DEFAULT_CRON,
+      cronExpression: trim(merged.polling.cronExpression) || DEFAULT_CRON,
     },
     storage: {
-      stateFilePath: resolvePath(storage.stateFilePath, DEFAULT_STATE_FILE),
+      stateFilePath: resolvePath(
+        merged.storage.stateFilePath,
+        DEFAULT_STATE_FILE,
+      ),
     },
     metadata: {
-      filePath: resolvePath(metadata.filePath, DEFAULT_CONFIG_FILE),
+      filePath: resolvePath(merged.metadata.filePath, DEFAULT_CONFIG_FILE),
     },
   };
 };
 
-/** @typedef {ReturnType<typeof createConfig>} BalanceBotConfig */
+/**
+ * Write JSON data atomically to disk to avoid partial config files.
+ * @param {string} filePath
+ * @param {any} data
+ * @returns {Promise<void>}
+ */
+const atomicWriteJson = async (filePath, data) => {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const tempFile = `${filePath}.${crypto.randomUUID()}.tmp`;
+  await fs.writeFile(tempFile, `${JSON.stringify(data, null, 2)}\n`, {
+    mode: 0o600,
+  });
+  await fs.chmod(tempFile, 0o600);
+  await fs.rename(tempFile, filePath);
+};
 
-export { sanitizeTargets, DEFAULT_DATA_DIR };
+/**
+ * Persistent configuration manager backed by a JSON file.
+ */
+class ConfigStore {
+  constructor({ filePath = path.join(DEFAULT_DATA_DIR, "config.json") } = {}) {
+    this.filePath = path.resolve(filePath);
+    this._pending = Promise.resolve();
+  }
+
+  /**
+   * Load configuration from disk, hydrating defaults when necessary.
+   * @returns {Promise<Record<string, any>>}
+   */
+  async _read() {
+    try {
+      const content = await fs.readFile(this.filePath, "utf8");
+      const parsed = JSON.parse(content);
+      return applyDefaults(parsed, { filePath: this.filePath });
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        return defaultConfigTemplate({ filePath: this.filePath });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Persist the provided configuration payload to disk.
+   * @param {Record<string, any>} data
+   * @returns {Promise<void>}
+   */
+  async _write(data) {
+    const payload = clone(data);
+    payload.notifications.targets = sanitizeTargets(
+      payload.notifications.targets,
+    );
+    await atomicWriteJson(this.filePath, payload);
+    logger.info("Persisted configuration", { filePath: this.filePath });
+  }
+
+  /**
+   * Read the current configuration from disk.
+   * @returns {Promise<Record<string, any>>}
+   */
+  async get() {
+    const config = await this._read();
+    return clone(config);
+  }
+
+  /**
+   * Apply a mutator function to the configuration in an atomic fashion.
+   * @param {(current: Record<string, any>) => Promise<Record<string, any>>} updater
+   * @returns {Promise<Record<string, any>>}
+   */
+  async update(updater) {
+    const perform = async () => {
+      const current = await this._read();
+      const next = await updater(clone(current));
+      await this._write(next);
+      return clone(next);
+    };
+
+    this._pending = this._pending.then(perform, perform);
+    return this._pending;
+  }
+
+  /**
+   * Store the SimpleFIN access URL.
+   * @param {string} accessUrl
+   * @returns {Promise<Record<string, any>>}
+   */
+  async setSimplefinAccess(accessUrl) {
+    const trimmed = trim(accessUrl);
+    if (!trimmed) {
+      throw new Error("Access URL must be provided");
+    }
+
+    return this.update(async (current) => ({
+      ...current,
+      simplefin: {
+        ...current.simplefin,
+        accessUrl: trimmed,
+      },
+    }));
+  }
+
+  /**
+   * Update the Apprise API endpoint.
+   * @param {string} appriseApiUrl
+   * @returns {Promise<Record<string, any>>}
+   */
+  async setAppriseApiUrl(appriseApiUrl) {
+    return this.update(async (current) => ({
+      ...current,
+      notifier: {
+        ...current.notifier,
+        appriseApiUrl: trim(appriseApiUrl) || current.notifier.appriseApiUrl,
+      },
+    }));
+  }
+
+  /**
+   * Update the cron expression controlling balance checks.
+   * @param {string} cronExpression
+   * @returns {Promise<Record<string, any>>}
+   */
+  async setCronExpression(cronExpression) {
+    return this.update(async (current) => ({
+      ...current,
+      polling: {
+        ...current.polling,
+        cronExpression: trim(cronExpression) || current.polling.cronExpression,
+      },
+    }));
+  }
+
+  /**
+   * Replace the configured notification targets.
+   * @param {Array<Record<string, any>>} targets
+   * @returns {Promise<Record<string, any>>}
+   */
+  async setNotificationTargets(targets) {
+    return this.update(async (current) => ({
+      ...current,
+      notifications: {
+        ...current.notifications,
+        targets: sanitizeTargets(Array.isArray(targets) ? targets : []),
+      },
+    }));
+  }
+
+  /**
+   * Batch-update core configuration knobs used by the onboarding UI.
+   * @param {{ appriseApiUrl?: string, cronExpression?: string, targets?: Array<Record<string, any>> }} params
+   * @returns {Promise<Record<string, any>>}
+   */
+  async setConfig({ appriseApiUrl, cronExpression, targets }) {
+    return this.update(async (current) => ({
+      ...current,
+      notifier: {
+        ...current.notifier,
+        appriseApiUrl: trim(appriseApiUrl) || current.notifier.appriseApiUrl,
+      },
+      polling: {
+        ...current.polling,
+        cronExpression: trim(cronExpression) || current.polling.cronExpression,
+      },
+      notifications: {
+        ...current.notifications,
+        targets: sanitizeTargets(Array.isArray(targets) ? targets : []),
+      },
+    }));
+  }
+}
+
+export { sanitizeTargets, DEFAULT_DATA_DIR, ConfigStore };
+
+/** @typedef {ReturnType<typeof createConfig>} BalanceBotConfig */
 
 export default createConfig;

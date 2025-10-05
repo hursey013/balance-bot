@@ -70,6 +70,11 @@ const exchangeSetupToken = async ({ claimUrl }) => {
   }
 };
 
+/**
+ * Build a deterministic cache key for a SimpleFIN account request.
+ * @param {string[]|undefined} accountIds
+ * @returns {string}
+ */
 const createCacheKey = (accountIds) => {
   if (!Array.isArray(accountIds) || accountIds.length === 0)
     return "accounts:all";
@@ -84,6 +89,11 @@ const createCacheKey = (accountIds) => {
  * @typedef {{ entries: Record<string, { value: unknown, timestamp: number }> }} CacheState
  */
 
+/**
+ * Create a persistence layer for SimpleFIN responses.
+ * @param {string|undefined} filePath
+ * @returns {{ get: (key: string, maxAgeMs?: number) => Promise<any>, set: (key: string, value: any) => Promise<void> }|null}
+ */
 const createCacheStore = (filePath) => {
   if (!filePath) return null;
 
@@ -253,6 +263,10 @@ const createSimplefinClient = ({
     return api.fetchAccounts(params);
   };
 
+  /**
+   * Provide metadata about the current access URL source.
+   * @returns {{ accessUrl: string, source: string, expiresAt: null }|null}
+   */
   const getAccessInfo = () =>
     currentAccessUrl
       ? {
@@ -262,6 +276,11 @@ const createSimplefinClient = ({
         }
       : null;
 
+  /**
+   * Replace the SimpleFIN access URL and reset the underlying API client.
+   * @param {string} nextAccessUrl
+   * @returns {void}
+   */
   const setAccessUrl = (nextAccessUrl) => {
     const trimmed = trim(nextAccessUrl);
     if (!trimmed) {

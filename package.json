@@ -2,7 +2,7 @@
   "name": "balance-bot",
   "private": true,
   "version": "2.0.0",
-  "description": "Keep SimpleFIN balances on your radar with instant Apprise alerts.",
+  "description": "Balance Bot monitors SimpleFIN accounts and relays rich Apprise notifications.",
   "type": "module",
   "workspaces": [
     "apps/*"

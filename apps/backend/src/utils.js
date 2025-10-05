@@ -1,5 +1,15 @@
-const trim = (value) => value?.trim() ?? "";
+/**
+ * Trim a string value while safely handling nullish input.
+ * @param {unknown} value
+ * @returns {string}
+ */
+const trim = (value) => value?.toString?.().trim?.() ?? "";
 
+/**
+ * Normalize a cache TTL value in milliseconds, falling back to one hour.
+ * @param {unknown} value
+ * @returns {number}
+ */
 const normalizeCacheTtl = (value) => {
   const defaultTtl = 60 * 60 * 1000;
   if (value === undefined) {
@@ -12,6 +22,11 @@ const normalizeCacheTtl = (value) => {
   return Math.max(0, parsed);
 };
 
+/**
+ * Parse a numeric string or number into a finite number.
+ * @param {unknown} value
+ * @returns {number|null}
+ */
 const parseNumeric = (value) => {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value === "string") {
@@ -21,6 +36,11 @@ const parseNumeric = (value) => {
   return null;
 };
 
+/**
+ * Resolve an account record into a normalized balance payload.
+ * @param {Record<string, any>|undefined|null} account
+ * @returns {{ amount: number, currency: string }|null}
+ */
 const resolveBalanceInfo = (account) => {
   if (!account) return null;
 
@@ -36,6 +56,12 @@ const resolveBalanceInfo = (account) => {
   return { amount, currency };
 };
 
+/**
+ * Format a numeric amount into a localized currency string.
+ * @param {number} amount
+ * @param {string} currency
+ * @returns {string}
+ */
 const formatCurrency = (amount, currency) => {
   if (!Number.isFinite(amount)) {
     return `${amount ?? "0"} ${currency}`;
@@ -50,10 +76,26 @@ const formatCurrency = (amount, currency) => {
   }
 };
 
+/**
+ * Return a deduplicated list while preserving the original order.
+ * @template T
+ * @param {T[]} items
+ * @returns {T[]}
+ */
 const uniqueEntries = (items) => Array.from(new Set(items));
 
+/**
+ * Remove trailing forward slashes from a URL-like string.
+ * @param {string} [value=""]
+ * @returns {string}
+ */
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 
+/**
+ * Redact credentials from a URL while keeping it human-readable.
+ * @param {string} value
+ * @returns {string}
+ */
 const redactAccessUrl = (value) => {
   const trimmed = trim(value);
   if (!trimmed) return "";

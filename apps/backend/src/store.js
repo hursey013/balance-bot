@@ -5,6 +5,10 @@ import { JSONFile } from "lowdb/node";
  * @typedef {{ accounts: Record<string, { lastBalance: number }> }} BalanceState
  */
 
+/**
+ * Provide the default persisted balance structure.
+ * @returns {BalanceState}
+ */
 const defaultState = () => ({ accounts: {} });
 
 /**

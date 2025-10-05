@@ -3,7 +3,7 @@ import { afterEach, beforeEach, test } from "node:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import ConfigStore from "../src/config-store.js";
+import { ConfigStore } from "../src/config.js";
 
 const createTempPath = async () => {
   const dir = await fs.mkdtemp(

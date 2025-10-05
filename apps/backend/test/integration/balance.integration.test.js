@@ -9,7 +9,7 @@ import { createConfig } from "../../src/config.js";
 import createSimplefinClient from "../../src/simplefin.js";
 import createNotifier from "../../src/notifier.js";
 import createStore from "../../src/store.js";
-import createBalanceProcessor from "../../src/balance.js";
+import { BalanceMonitor } from "../../src/index.js";
 
 nock.disableNetConnect();
 
@@ -21,7 +21,7 @@ const withTempDir = async (t) => {
   return dir;
 };
 
-test("balance processor integrates simplefin, store, and notifier", async (t) => {
+test("balance monitor integrates simplefin, store, and notifier", async (t) => {
   t.after(() => {
     if (!nock.isDone()) {
       const pending = nock.pendingMocks();
@@ -102,17 +102,17 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
 
   const notifier = createNotifier(config.notifier);
   const store = createStore(config.storage.stateFilePath);
-  const balanceProcessor = createBalanceProcessor({
+  const balanceMonitor = new BalanceMonitor({
     simplefinClient,
     notifier,
-    store,
+    stateStore: store,
     config,
   });
 
-  await balanceProcessor.checkBalances();
+  await balanceMonitor.runOnce();
   assert.equal(appriseRequests.length, 0);
 
-  await balanceProcessor.checkBalances();
+  await balanceMonitor.runOnce();
   assert.equal(appriseRequests.length, 1);
 
   const [request] = appriseRequests;

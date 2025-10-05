@@ -9,6 +9,11 @@ import { trimTrailingSlash } from "./utils.js";
  * @property {string|undefined} configKey
  */
 
+/**
+ * Deliver a notification payload to Apprise.
+ * @param {{ appriseApiUrl: string, urls?: string[], title: string, body: string }} params
+ * @returns {Promise<void>}
+ */
 const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   const payload = {
     title,
@@ -38,6 +43,11 @@ const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   }
 };
 
+/**
+ * Build a notifier that delivers messages through Apprise.
+ * @param {{ appriseApiUrl: string }} params
+ * @returns {{ sendNotification: (payload: NotificationPayload) => Promise<void> }}
+ */
 const createNotifier = ({ appriseApiUrl }) => {
   if (!appriseApiUrl) {
     throw new Error("Apprise API URL is required");
@@ -47,6 +57,11 @@ const createNotifier = ({ appriseApiUrl }) => {
 
   /**
    * @param {NotificationPayload} options
+   */
+  /**
+   * Submit a single notification to Apprise using direct URLs or a config key.
+   * @param {NotificationPayload} param0
+   * @returns {Promise<void>}
    */
   const sendNotification = async ({ title, body, urls, configKey }) => {
     const targets = Array.isArray(urls) ? urls.filter(Boolean) : [];

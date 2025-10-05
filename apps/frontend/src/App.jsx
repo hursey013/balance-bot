@@ -1,7 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   name?: string,
+ *   nickname?: string,
+ *   institution?: string,
+ *   mask?: string,
+ *   last_four?: string
+ * }} Account
+ */
+
+/**
+ * @typedef {{
+ *   name: string,
+ *   accountIds: string[],
+ *   appriseConfigKey?: string,
+ *   appriseUrls: string[]
+ * }} Target
+ */
+
 const LOGO_URL = "/logo.svg";
 
+/**
+ * Generate a readable label for an account in the wizard UI.
+ * @param {Account} account
+ * @returns {string}
+ */
 const accountLabel = (account) => {
   if (!account) return "Unknown account";
   const parts = [account.name || account.nickname || account.institution];
@@ -14,6 +39,10 @@ const accountLabel = (account) => {
   return parts.filter(Boolean).join(" · ") || account.id || "Account";
 };
 
+/**
+ * Provide a fresh notification target for the wizard.
+ * @returns {Target}
+ */
 const createBlankTarget = () => ({
   name: "",
   accountIds: [],
@@ -21,12 +50,21 @@ const createBlankTarget = () => ({
   appriseUrls: [],
 });
 
+/**
+ * Split a textarea input into a list of Apprise URLs.
+ * @param {string} value
+ * @returns {string[]}
+ */
 const splitUrls = (value) =>
   value
     .split(/[\n,]/)
     .map((entry) => entry.trim())
     .filter(Boolean);
 
+/**
+ * Render a single step indicator for the onboarding wizard.
+ * @param {{ step: number, currentStep: number, title: string, description: string }} props
+ */
 const WizardStep = ({ step, currentStep, title, description }) => (
   <div className="flex gap-3">
     <div
@@ -41,6 +79,10 @@ const WizardStep = ({ step, currentStep, title, description }) => (
   </div>
 );
 
+/**
+ * Edit a single notification target in the onboarding flow.
+ * @param {{ target: Target, index: number, accounts: Account[], onChange: (target: Target) => void, onRemove: () => void }} props
+ */
 const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
   const handleAccountToggle = (accountId, checked) => {
     if (accountId === "*") {
@@ -182,6 +224,10 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
   );
 };
 
+/**
+ * Balance Bot onboarding and configuration wizard.
+ * @returns {JSX.Element}
+ */
 const App = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -197,6 +243,7 @@ const App = () => {
   const [accessPreview, setAccessPreview] = useState(null);
 
   useEffect(() => {
+    // Fetch persisted configuration so the wizard can resume in place.
     const boot = async () => {
       try {
         const response = await fetch("/api/config");
