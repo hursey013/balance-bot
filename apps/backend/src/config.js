@@ -1,5 +1,10 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { trim, normalizeCacheTtl } from "./utils.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, "../../..");
 
 /**
  * @typedef {object} BalanceBotConfig
@@ -15,10 +20,14 @@ const sanitizeTargets = (targets) => {
   if (!Array.isArray(targets)) return [];
   return targets.map((target) => {
     const accountIds = Array.isArray(target.accountIds)
-      ? Array.from(new Set(target.accountIds.map((id) => trim(id)).filter(Boolean)))
+      ? Array.from(
+          new Set(target.accountIds.map((id) => trim(id)).filter(Boolean)),
+        )
       : [];
     const appriseUrls = Array.isArray(target.appriseUrls)
-      ? Array.from(new Set(target.appriseUrls.map((url) => trim(url)).filter(Boolean)))
+      ? Array.from(
+          new Set(target.appriseUrls.map((url) => trim(url)).filter(Boolean)),
+        )
       : [];
     const appriseConfigKey = target.appriseConfigKey
       ? trim(target.appriseConfigKey)
@@ -50,8 +59,12 @@ const sanitizeTargets = (targets) => {
 
 const resolveDataDir = () => {
   const configured = trim(process.env.BALANCE_BOT_DATA_DIR);
-  if (configured) return path.resolve(configured);
-  return path.resolve("data");
+  if (configured) {
+    return path.isAbsolute(configured)
+      ? path.resolve(configured)
+      : path.resolve(PROJECT_ROOT, configured);
+  }
+  return path.join(PROJECT_ROOT, "data");
 };
 
 const DEFAULT_DATA_DIR = resolveDataDir();
@@ -70,9 +83,7 @@ const resolvePath = (value, fallback) => {
   return path.join(DEFAULT_DATA_DIR, trimmed);
 };
 
-export const createConfig = ({
-  persisted = {},
-} = {}) => {
+export const createConfig = ({ persisted = {} } = {}) => {
   const simplefin = persisted.simplefin ?? {};
   const notifier = persisted.notifier ?? {};
   const notifications = persisted.notifications ?? {};

@@ -136,6 +136,7 @@ const createBalanceProcessor = ({
       return false;
     }
     running = true;
+    log.info("Balance check started");
     try {
       const accounts = await fetchRelevantAccounts();
       if (!Array.isArray(accounts) || !accounts.length) {
@@ -154,6 +155,7 @@ const createBalanceProcessor = ({
       }
       return true;
     } finally {
+      log.info("Balance check finished");
       running = false;
     }
   };

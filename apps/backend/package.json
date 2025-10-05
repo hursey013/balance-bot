@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "build": "node ./scripts/build.mjs",
+    "build": "node -e \"console.log('Nothing to build for backend')\"",
     "lint": "eslint src test",
     "lint:fix": "eslint src test --fix",
     "test": "node --test --test-concurrency=1"
