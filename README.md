@@ -38,7 +38,7 @@ Title: Balance update
 
 ## Prerequisites
 
-- A SimpleFIN access link (looks like `https://user:pass@bridge.simplefin.org/simplefin`) from [beta-bridge.simplefin.org/info/developers](https://beta-bridge.simplefin.org/info/developers). When you generate it, copy the whole link—username, password, everything.
+- A SimpleFIN setup token (the long base64 string you receive after connecting Balance Bot) or an existing access link from [beta-bridge.simplefin.org](https://beta-bridge.simplefin.org). Copy the full value so Balance Bot can exchange or reuse it later.
 - Somewhere for Apprise to deliver notifications: a Discord webhook, Matrix room, email address, SMS gateway, or a saved Apprise config key if you already have one.
 - Either Docker or Node.js 20+ on the machine that will run the bot.
 
@@ -53,8 +53,9 @@ services:
     container_name: balance-bot
     restart: unless-stopped
     environment:
-      # Provide either SIMPLEFIN_SETUP_TOKEN for first boot or SIMPLEFIN_ACCESS_URL if you already have the link.
-      SIMPLEFIN_SETUP_TOKEN: "paste-your-one-time-setup-token"
+      # Paste the SimpleFIN setup token for first boot; Balance Bot will stash the access link under ./data/
+      SIMPLEFIN_SETUP_TOKEN: "paste-your-base64-setup-token"
+      # After the first run, remove the token and/or switch to a saved SIMPLEFIN_ACCESS_URL value instead.
       # SIMPLEFIN_ACCESS_URL: "https://user:secret@bridge.simplefin.org/simplefin"
       ACCOUNT_NOTIFICATION_TARGETS:
         >- # JSON array describing who should receive which account updates
@@ -93,20 +94,31 @@ services:
 
 Targets can point to named Apprise configs (great for “Elliot’s iPad + phone” bundles) or list URLs right in place for quick experiments. Feel free to mix both styles—Balance Bot will happily use whatever you provide. Drop a `"*"` into `accountIds` when a target should hear about every account you’re tracking.
 
+## SimpleFIN Setup Token Onboarding
+
+SimpleFIN issues a one-time setup token as the first step of connecting an app. To onboard Balance Bot with that flow:
+
+1. Visit the [SimpleFIN Bridge](https://beta-bridge.simplefin.org) and start the Balance Bot connection. When it completes, copy the `Setup Token` string (it looks like a long base64 value).
+2. Provide that token via the `SIMPLEFIN_SETUP_TOKEN` environment variable (e.g., in Docker Compose or a local `.env`). Make sure the `data/` directory is stored on persistent storage.
+3. Start Balance Bot. On the first run it exchanges the token for the long-lived access URL, writes it to `data/simplefin-access-url`, and clears the token from the running process.
+4. Remove `SIMPLEFIN_SETUP_TOKEN` from your configuration after the first successful start. Subsequent runs reuse the stored access link automatically. If you ever need to onboard again, delete the saved file and paste a fresh setup token.
+
+Already have an access link? You can skip the token flow and set `SIMPLEFIN_ACCESS_URL` directly instead.
+
 ## Configuration Reference
 
-| Variable                       | Purpose                                                                                                                                                                  | Default                                           |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| `SIMPLEFIN_ACCESS_URL`         | Full SimpleFIN access link including credentials (Balance Bot automatically calls the `/accounts` endpoint).                                                             | required (or use setup token)                     |
-| `SIMPLEFIN_SETUP_TOKEN`        | Optional one-time setup token. When provided and no saved access URL is present, the token is exchanged at boot and the result is stored securely. Remove after success. | unset                                             |
-| `SIMPLEFIN_ACCESS_URL_FILE`    | Path to the persisted SimpleFIN access URL. Handy for Docker secrets or custom mounts.                                                                                   | `data/simplefin-access-url`                       |
-| `APPRISE_API_URL`              | Base URL for Apprise notifications (append a config key automatically).                                                                                                  | `http://apprise:8000/notify`                      |
-| `ACCOUNT_NOTIFICATION_TARGETS` | JSON describing who gets notified. Provide `accountIds`, plus `appriseUrls` or `appriseConfigKey`.                                                                       | `[]`                                              |
-| `POLL_CRON_EXPRESSION`         | Cron schedule for balance checks.                                                                                                                                        | `0 * * * *` (hourly)                              |
-| `SIMPLEFIN_CACHE_TTL_MS`       | Milliseconds to cache SimpleFIN responses; set to `0` to disable.                                                                                                        | `3600000`                                         |
-| `STATE_FILE_PATH`              | Where to persist the last known balances.                                                                                                                                | `data/state.json`                                 |
-| `SIMPLEFIN_CACHE_PATH`         | Where cached SimpleFIN responses are stored.                                                                                                                             | `data/cache.json`                                 |
-| `SIMPLEFIN_SETUP_URL`          | Override the endpoint used to exchange setup tokens (mostly for testing).                                                                                                | `https://beta-bridge.simplefin.org/connect/token` |
+| Variable                       | Purpose                                                                                                                                                                    | Default                                           |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `SIMPLEFIN_ACCESS_URL`         | Full SimpleFIN access link including credentials (Balance Bot automatically calls the `/accounts` endpoint or reads the cached copy saved in `data/simplefin-access-url`). | required (or use setup token)                     |
+| `SIMPLEFIN_SETUP_TOKEN`        | One-time setup token from the SimpleFIN onboarding flow. On first boot the bot exchanges it, writes `data/simplefin-access-url`, and clears the token—remove it afterward. | unset                                             |
+| `SIMPLEFIN_ACCESS_URL_FILE`    | Path to the persisted SimpleFIN access URL. Handy for Docker secrets or custom mounts.                                                                                     | `data/simplefin-access-url`                       |
+| `APPRISE_API_URL`              | Base URL for Apprise notifications (append a config key automatically).                                                                                                    | `http://apprise:8000/notify`                      |
+| `ACCOUNT_NOTIFICATION_TARGETS` | JSON describing who gets notified. Provide `accountIds`, plus `appriseUrls` or `appriseConfigKey`.                                                                         | `[]`                                              |
+| `POLL_CRON_EXPRESSION`         | Cron schedule for balance checks.                                                                                                                                          | `0 * * * *` (hourly)                              |
+| `SIMPLEFIN_CACHE_TTL_MS`       | Milliseconds to cache SimpleFIN responses; set to `0` to disable.                                                                                                          | `3600000`                                         |
+| `STATE_FILE_PATH`              | Where to persist the last known balances.                                                                                                                                  | `data/state.json`                                 |
+| `SIMPLEFIN_CACHE_PATH`         | Where cached SimpleFIN responses are stored.                                                                                                                               | `data/cache.json`                                 |
+| `SIMPLEFIN_SETUP_URL`          | Override the endpoint used to exchange setup tokens (mostly for testing).                                                                                                  | `https://beta-bridge.simplefin.org/connect/token` |
 
 Balance Bot tidies up `ACCOUNT_NOTIFICATION_TARGETS` for you by trimming whitespace, skipping blank account IDs, and ignoring targets without any destinations so you don’t have to stress about perfect JSON formatting.
 
@@ -122,6 +134,8 @@ Create a quick `.env` file (or export the same values another way) with at least
 
 ```
 SIMPLEFIN_ACCESS_URL=https://user:pass@bridge.simplefin.org/simplefin
+# For the new onboarding flow, swap the line above for your one-time setup token instead:
+# SIMPLEFIN_SETUP_TOKEN=eyJ...your-base64-token
 APPRISE_API_URL=http://localhost:8000/notify
 ACCOUNT_NOTIFICATION_TARGETS=[{"name":"Me","accountIds":["*"],"appriseUrls":["discord://..."]}]
 ```
