@@ -16,33 +16,19 @@
   <a href="https://ghcr.io/hursey013/balance-bot"><img alt="Image" src="https://img.shields.io/badge/ghcr-image-blue"></a>
 </p>
 
-## Overview
+## Meet Balance Bot
 
-Balance Bot is a friendly little Node.js helper that keeps an eye on the [SimpleFIN](https://beta-bridge.simplefin.org) bridge and nudges [Apprise](https://github.com/caronc/apprise) whenever money moves. It was built for families with kids who are too young for the bank’s app but still want to know when allowance hits—or when snack money disappears—without Mom or Dad relaying every single update.
+Think of Balance Bot as the enthusiastic helper who keeps an eye on the [SimpleFIN](https://beta-bridge.simplefin.org) bridge so you don’t have to. When an allowance lands—or a mystery snack run drains the balance—we nudge [Apprise](https://github.com/caronc/apprise) and send an emoji-packed message straight to the people who care.
 
-## Features
+## What You’ll Need (Nothing Scary)
 
-- 👨‍👩‍👧 Share balance changes with everyone who needs to know, whether that’s one kid’s account or the whole crew via the wildcard `*` target.
-- 💾 Reuse SimpleFIN responses for a bit so you stay well within bridge rate limits while keeping updates feeling fresh.
-- 📣 Send colorful, emoji-packed notifications through any Apprise destination that works for your family chat or smart display.
+- A SimpleFIN setup token or an existing access link. Copy the whole thing—we’ll paste it into the setup wizard in a moment.
+- Anywhere Apprise can reach your crew: a Discord webhook, Matrix room, email address, or an Apprise config key you already have ready to go.
+- Docker or Node.js 20+ on the machine that will run Balance Bot.
 
-#### Here’s the kind of alert the bot sends:
+## Fastest Path: Docker Compose
 
-```
-Title: Balance update
-
-👤 Elliot - Checking
-📉 -$12.34
-💰 $87.66
-```
-
-## Prerequisites
-
-- A SimpleFIN setup token (the long base64 string you receive after connecting Balance Bot) or an existing access link from [beta-bridge.simplefin.org](https://beta-bridge.simplefin.org). Copy the full value so Balance Bot can exchange or reuse it later.
-- Somewhere for Apprise to deliver notifications: a Discord webhook, Matrix room, email address, SMS gateway, or a saved Apprise config key if you already have one.
-- Either Docker or Node.js 20+ on the machine that will run the bot.
-
-## Quick Start (Docker Compose)
+Drop this into `docker-compose.yml`, then bring it up with `docker compose up -d`:
 
 ```yaml
 version: "3.8"
@@ -52,26 +38,10 @@ services:
     image: ghcr.io/hursey013/balance-bot:latest
     container_name: balance-bot
     restart: unless-stopped
+    ports:
+      - "4000:4000" # exposes the onboarding UI + API
     environment:
-      # Paste the SimpleFIN setup token for first boot; Balance Bot will stash the access link under ./data/
-      SIMPLEFIN_SETUP_TOKEN: "paste-your-base64-setup-token"
-      # After the first run, remove the token and/or switch to a saved SIMPLEFIN_ACCESS_URL value instead.
-      # SIMPLEFIN_ACCESS_URL: "https://user:secret@bridge.simplefin.org/simplefin"
-      ACCOUNT_NOTIFICATION_TARGETS:
-        >- # JSON array describing who should receive which account updates
-        [
-          {
-            "name": "Elliot",
-            "accountIds": ["acct-123"],
-            "appriseConfigKey": "elliot"
-          },
-          {
-            "name": "Family Room",
-            "accountIds": ["*"],
-            "appriseUrls": ["discord://webhook-id/webhook-token"]
-          }
-        ]
-      APPRISE_API_URL: "http://apprise:8000/notify" # URL where Apprise listens inside the stack
+      TZ: "America/New_York"
     volumes:
       - ./data:/app/data
     depends_on:
@@ -82,7 +52,7 @@ services:
     container_name: apprise
     restart: unless-stopped
     environment:
-      PUID: "1026" # adjust to your environment
+      PUID: "1026" # tweak to match your user
       PGID: "100"
       TZ: "America/New_York"
     volumes:
@@ -92,52 +62,88 @@ services:
       - "8000:8000"
 ```
 
-Targets can point to named Apprise configs (great for “Elliot’s iPad + phone” bundles) or list URLs right in place for quick experiments. Feel free to mix both styles—Balance Bot will happily use whatever you provide. Drop a `"*"` into `accountIds` when a target should hear about every account you’re tracking.
+Once the containers are up, open [http://localhost:4000](http://localhost:4000). The wizard will walk you through everything—no `.env` editing required. Keep the browser tab open, grab your SimpleFIN token or access link, and we’ll handle the rest together.
 
-## SimpleFIN Setup Token Onboarding
+## Guided Onboarding
 
-SimpleFIN issues a one-time setup token as the first step of connecting an app. To onboard Balance Bot with that flow:
+1. **Paste the SimpleFIN setup token or access link.** We’ll exchange the token, stash the long-lived access URL in your config, and immediately pull down your accounts so you can see what you’re working with.
+2. **Meet your accounts.** Pick which accounts belong to which people (or use the `*` wildcard when someone should hear about everything). You can mix Apprise config keys and raw URLs—Balance Bot happily supports both.
+3. **Save and relax.** When you click “Save preferences,” we write everything to the Balance Bot data directory (by default `data/config.json`, or `/app/data/config.json` inside Docker), restart the background watcher, and you’re live.
 
-1. Visit the [SimpleFIN Bridge](https://beta-bridge.simplefin.org) and start the Balance Bot connection. When it completes, copy the `Setup Token` string (it looks like a long base64 value).
-2. Provide that token via the `SIMPLEFIN_SETUP_TOKEN` environment variable (e.g., in Docker Compose or a local `.env`). Make sure the `data/` directory is stored on persistent storage.
-3. Start Balance Bot. On the first run it exchanges the token for the long-lived access URL, writes it to `data/simplefin-access-url`, and clears the token from the running process.
-4. Remove `SIMPLEFIN_SETUP_TOKEN` from your configuration after the first successful start. Subsequent runs reuse the stored access link automatically. If you ever need to onboard again, delete the saved file and paste a fresh setup token.
+Need to tweak something later? Pop back to [http://localhost:4000](http://localhost:4000). The wizard remembers where you left off and makes updates painless.
 
-Already have an access link? You can skip the token flow and set `SIMPLEFIN_ACCESS_URL` directly instead.
+## What Gets Saved
 
-## Configuration Reference
+All of your answers live in `config.json` inside the data directory:
 
-| Variable                       | Purpose                                                                                                                                                                    | Default                                           |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `SIMPLEFIN_ACCESS_URL`         | Full SimpleFIN access link including credentials (Balance Bot automatically calls the `/accounts` endpoint or reads the cached copy saved in `data/simplefin-access-url`). | required (or use setup token)                     |
-| `SIMPLEFIN_SETUP_TOKEN`        | One-time setup token from the SimpleFIN onboarding flow. On first boot the bot exchanges it, writes `data/simplefin-access-url`, and clears the token—remove it afterward. | unset                                             |
-| `SIMPLEFIN_ACCESS_URL_FILE`    | Path to the persisted SimpleFIN access URL. Handy for Docker secrets or custom mounts.                                                                                     | `data/simplefin-access-url`                       |
-| `APPRISE_API_URL`              | Base URL for Apprise notifications (append a config key automatically).                                                                                                    | `http://apprise:8000/notify`                      |
-| `ACCOUNT_NOTIFICATION_TARGETS` | JSON describing who gets notified. Provide `accountIds`, plus `appriseUrls` or `appriseConfigKey`.                                                                         | `[]`                                              |
-| `POLL_CRON_EXPRESSION`         | Cron schedule for balance checks.                                                                                                                                          | `0 * * * *` (hourly)                              |
-| `SIMPLEFIN_CACHE_TTL_MS`       | Milliseconds to cache SimpleFIN responses; set to `0` to disable.                                                                                                          | `3600000`                                         |
-| `STATE_FILE_PATH`              | Where to persist the last known balances.                                                                                                                                  | `data/state.json`                                 |
-| `SIMPLEFIN_CACHE_PATH`         | Where cached SimpleFIN responses are stored.                                                                                                                               | `data/cache.json`                                 |
-| `SIMPLEFIN_SETUP_URL`          | Override the endpoint used to exchange setup tokens (mostly for testing).                                                                                                  | `https://beta-bridge.simplefin.org/connect/token` |
+```json
+{
+  "simplefin": {
+    "accessUrl": "https://user:pass@bridge.simplefin.org/simplefin",
+    "cacheFilePath": "cache.json",
+    "cacheTtlMs": 3600000
+  },
+  "notifier": {
+    "appriseApiUrl": "http://apprise:8000/notify"
+  },
+  "notifications": {
+    "targets": [
+      {
+        "name": "Family Room",
+        "accountIds": ["*"],
+        "appriseUrls": ["discord://webhook-id/webhook-token"]
+      }
+    ]
+  },
+  "polling": {
+    "cronExpression": "0 * * * *"
+  },
+  "storage": {
+    "stateFilePath": "state.json"
+  }
+}
+```
 
-Balance Bot tidies up `ACCOUNT_NOTIFICATION_TARGETS` for you by trimming whitespace, skipping blank account IDs, and ignoring targets without any destinations so you don’t have to stress about perfect JSON formatting.
+Paths inside the file are relative to that same data directory, so `data/state.json` turns into `/app/data/state.json` in the container (and `apps/backend/data/state.json` when you run locally without overriding anything).
 
-## Running Locally
+If you ever want a fresh start, delete `config.json` from the data directory while Balance Bot is stopped and rerun the wizard.
+
+The Docker image sets `BALANCE_BOT_DATA_DIR=/app/data` so everything lands in one easy-to-mount folder. Feel free to point that variable anywhere else if you have a different storage layout in mind.
+
+### Tweaking the Nerdy Bits
+
+Want to poll more often, dial down caching, or move the state file somewhere else? Open the data directory’s `config.json` in your favorite editor while the bot is stopped, make your adjustments, then start the service again. Balance Bot will pick up the new settings on the next reload.
+
+## Project Layout (For the Curious)
+
+```
+apps/
+  backend/   # Express API, SimpleFIN polling loop, JSON persistence
+  frontend/  # Vite + React + Tailwind onboarding wizard
+```
+
+Running any of the root scripts (`npm run lint`, `npm run test`, `npm run build`) will fan out to both workspaces.
+
+## Running Locally Without Docker
 
 ```bash
 npm install
-npm test
-npm start
+npm run build
+npm run start --workspace=@balance-bot/backend
 ```
 
-Create a quick `.env` file (or export the same values another way) with at least:
+The backend listens on [http://localhost:4000](http://localhost:4000). For a hot-reloading UI, open another terminal and run:
 
-```
-SIMPLEFIN_ACCESS_URL=https://user:pass@bridge.simplefin.org/simplefin
-# For the new onboarding flow, swap the line above for your one-time setup token instead:
-# SIMPLEFIN_SETUP_TOKEN=eyJ...your-base64-token
-APPRISE_API_URL=http://localhost:8000/notify
-ACCOUNT_NOTIFICATION_TARGETS=[{"name":"Me","accountIds":["*"],"appriseUrls":["discord://..."]}]
+```bash
+npm run dev --workspace=@balance-bot/frontend
 ```
 
-The bot keeps track of the last balance it saw and any cached SimpleFIN responses under `data/`. Pop that folder on persistent storage (or bind-mount it in Docker) so it can pick up right where it left off.
+## Keeping Everything Healthy
+
+- `npm test` runs the backend’s Node test suite and the frontend’s Vitest suite.
+- `npm run lint` keeps styling tidy across the repo.
+- `npm run build` bundles the frontend and preps the backend for production.
+
+Balance Bot stores cached balances and SimpleFIN snapshots under the data directory (for the Docker image that’s `/app/data`). Mount that directory somewhere persistent so your history sticks around between restarts.
+
+That’s it—you’re ready to keep your crew in the loop without babysitting bank logins. Have fun!

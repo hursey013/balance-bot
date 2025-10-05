@@ -34,22 +34,30 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
   const stateFile = path.join(tempDir, "state.json");
   const cacheFile = path.join(tempDir, "cache.json");
 
-  const env = {
-    SIMPLEFIN_ACCESS_URL: "https://user:pass@bridge.simplefin.org/simplefin",
-    STATE_FILE_PATH: stateFile,
-    SIMPLEFIN_CACHE_PATH: cacheFile,
-    SIMPLEFIN_CACHE_TTL_MS: "0",
-    ACCOUNT_NOTIFICATION_TARGETS: JSON.stringify([
-      {
-        name: "Integration",
-        accountIds: ["acct-1"],
-        appriseUrls: ["http://apprise.local/notify"],
-      },
-    ]),
-    APPRISE_API_URL: "http://apprise.local/notify",
+  const persisted = {
+    simplefin: {
+      accessUrl: "https://user:pass@bridge.simplefin.org/simplefin",
+      cacheFilePath: cacheFile,
+      cacheTtlMs: 0,
+    },
+    storage: {
+      stateFilePath: stateFile,
+    },
+    notifications: {
+      targets: [
+        {
+          name: "Integration",
+          accountIds: ["acct-1"],
+          appriseUrls: ["http://apprise.local/notify"],
+        },
+      ],
+    },
+    notifier: {
+      appriseApiUrl: "http://apprise.local/notify",
+    },
   };
 
-  const config = createConfig({ env });
+  const config = createConfig({ persisted });
 
   const simplefinSnapshots = [
     [
@@ -87,13 +95,10 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
     });
 
   const simplefinClient = createSimplefinClient({
-    env,
-    accessUrlFilePath: config.simplefin.accessUrlFilePath,
+    accessUrl: config.simplefin.accessUrl,
     cacheFilePath: config.simplefin.cacheFilePath,
     cacheTtlMs: config.simplefin.cacheTtlMs,
   });
-
-  await simplefinClient.ensureAccess();
 
   const notifier = createNotifier(config.notifier);
   const store = createStore(config.storage.stateFilePath);
@@ -117,6 +122,6 @@ test("balance processor integrates simplefin, store, and notifier", async (t) =>
   assert(request.body.body.includes("💰 $150.25"));
 
   const persistedRaw = await fs.readFile(stateFile, "utf8");
-  const persisted = JSON.parse(persistedRaw);
-  assert.equal(persisted.accounts["acct-1"].lastBalance, 150.25);
+  const persistedState = JSON.parse(persistedRaw);
+  assert.equal(persistedState.accounts["acct-1"].lastBalance, 150.25);
 });
