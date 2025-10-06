@@ -304,7 +304,9 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
     const target = event.target;
     const element = target instanceof Element ? target : target?.parentElement;
     if (
-      element?.closest('button, a, input, textarea, select, label, [role="button"]')
+      element?.closest(
+        'button, a, input, textarea, select, label, [role="button"]',
+      )
     ) {
       return;
     }
@@ -470,7 +472,7 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
 
                   {filteredGroups.length === 0 ? (
                     <p className="px-3 py-8 text-center text-sm text-slate-500">
-                      No accounts match "{query}".
+                      No accounts match &quot;{query}&quot;.
                     </p>
                   ) : null}
 
@@ -841,7 +843,7 @@ const App = () => {
           <header className="flex flex-col items-center gap-4 text-center">
             <img src={LOGO_URL} alt="Balance Bot" className="h-20 w-20" />
             <h1 className="text-3xl font-bold">
-              Let's get Balance Bot connected
+              Let&apos;s get Balance Bot connected
             </h1>
             <p className="max-w-2xl text-slate-400">
               We&apos;ll gather your SimpleFIN access and Apprise endpoint, then

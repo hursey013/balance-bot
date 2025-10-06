@@ -168,7 +168,7 @@ const applyDefaults = (persisted = {}, { filePath }) => {
       ...(persisted.metadata ?? {}),
       onboarding: {
         ...defaults.metadata.onboarding,
-        ...(((persisted.metadata ?? {}).onboarding) ?? {}),
+        ...((persisted.metadata ?? {}).onboarding ?? {}),
       },
     },
   };
