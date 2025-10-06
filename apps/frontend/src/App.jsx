@@ -27,7 +27,7 @@ const LOGO_URL = '/logo.svg';
  * @param {Account} account
  * @returns {string}
  */
-const accountLabel = account => {
+const accountLabel = (account) => {
   if (!account) return 'Unknown account';
   const parts = [account.name || account.nickname || account.institution];
   if (account.mask || account.last_four) {
@@ -55,10 +55,10 @@ const createBlankTarget = () => ({
  * @param {string} value
  * @returns {string[]}
  */
-const splitUrls = value =>
+const splitUrls = (value) =>
   value
     .split(/[\n,]/)
-    .map(entry => entry.trim())
+    .map((entry) => entry.trim())
     .filter(Boolean);
 
 /**
@@ -93,7 +93,7 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
       return;
     }
 
-    const withoutAll = target.accountIds.filter(id => id !== '*');
+    const withoutAll = target.accountIds.filter((id) => id !== '*');
     let next = new Set(withoutAll);
     if (checked) {
       next.add(accountId);
@@ -106,7 +106,10 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
     });
   };
 
-  const selectedAccounts = useMemo(() => new Set(target.accountIds), [target.accountIds]);
+  const selectedAccounts = useMemo(
+    () => new Set(target.accountIds),
+    [target.accountIds],
+  );
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-black/20">
@@ -123,7 +126,9 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
             className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
             placeholder="Elliot's devices"
             value={target.name}
-            onChange={event => onChange({ ...target, name: event.target.value })}
+            onChange={(event) =>
+              onChange({ ...target, name: event.target.value })
+            }
           />
         </div>
         <button
@@ -145,11 +150,13 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
               type="checkbox"
               className="rounded border-slate-600 bg-slate-900 text-primary focus:ring-primary/40"
               checked={selectedAccounts.has('*')}
-              onChange={event => handleAccountToggle('*', event.target.checked)}
+              onChange={(event) =>
+                handleAccountToggle('*', event.target.checked)
+              }
             />
             All accounts
           </label>
-          {accounts.map(account => (
+          {accounts.map((account) => (
             <label
               key={account.id}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200"
@@ -157,9 +164,15 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
               <input
                 type="checkbox"
                 className="rounded border-slate-600 bg-slate-900 text-primary focus:ring-primary/40"
-                checked={selectedAccounts.has('*') || selectedAccounts.has(account.id)}
-                onChange={event => handleAccountToggle(account.id, event.target.checked)}
-                disabled={selectedAccounts.has('*') && !selectedAccounts.has(account.id)}
+                checked={
+                  selectedAccounts.has('*') || selectedAccounts.has(account.id)
+                }
+                onChange={(event) =>
+                  handleAccountToggle(account.id, event.target.checked)
+                }
+                disabled={
+                  selectedAccounts.has('*') && !selectedAccounts.has(account.id)
+                }
               />
               {accountLabel(account)}
             </label>
@@ -180,7 +193,7 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
             className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
             placeholder="team-balance-updates"
             value={target.appriseConfigKey ?? ''}
-            onChange={event =>
+            onChange={(event) =>
               onChange({ ...target, appriseConfigKey: event.target.value })
             }
           />
@@ -198,7 +211,7 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
             className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
             placeholder="discord://webhook-url"
             value={(target.appriseUrls ?? []).join('\n')}
-            onChange={event =>
+            onChange={(event) =>
               onChange({
                 ...target,
                 appriseUrls: splitUrls(event.target.value),
@@ -219,7 +232,9 @@ const App = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState([]);
-  const [appriseApiUrl, setAppriseApiUrl] = useState('http://apprise:8000/notify');
+  const [appriseApiUrl, setAppriseApiUrl] = useState(
+    'http://apprise:8000/notify',
+  );
   const [targets, setTargets] = useState([]);
   const [setupToken, setSetupToken] = useState('');
   const [accessUrl, setAccessUrl] = useState('');
@@ -260,7 +275,7 @@ const App = () => {
     boot();
   }, []);
 
-  const handleExchange = async event => {
+  const handleExchange = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError('');
@@ -339,17 +354,17 @@ const App = () => {
   };
 
   const addTarget = () => {
-    setTargets(existing => [...existing, createBlankTarget()]);
+    setTargets((existing) => [...existing, createBlankTarget()]);
   };
 
   const updateTarget = (index, nextTarget) => {
-    setTargets(existing =>
+    setTargets((existing) =>
       existing.map((target, idx) => (idx === index ? nextTarget : target)),
     );
   };
 
-  const removeTarget = index => {
-    setTargets(existing => existing.filter((_, idx) => idx !== index));
+  const removeTarget = (index) => {
+    setTargets((existing) => existing.filter((_, idx) => idx !== index));
   };
 
   return (
@@ -359,8 +374,9 @@ const App = () => {
           <img src={LOGO_URL} alt="Balance Bot" className="h-20 w-20" />
           <h1 className="text-3xl font-bold">Welcome to Balance Bot</h1>
           <p className="max-w-2xl text-slate-400">
-            We&apos;ll walk through everything together—paste your SimpleFIN details, meet
-            your accounts, and decide who gets the heads up when money moves.
+            We&apos;ll walk through everything together—paste your SimpleFIN
+            details, meet your accounts, and decide who gets the heads up when
+            money moves.
           </p>
         </header>
 
@@ -413,11 +429,13 @@ const App = () => {
                     className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
                     placeholder="Paste the long base64 token from SimpleFIN"
                     value={setupToken}
-                    onChange={event => setSetupToken(event.target.value)}
+                    onChange={(event) => setSetupToken(event.target.value)}
                   />
                 </div>
 
-                <div className="text-center text-sm font-semibold text-slate-400">or</div>
+                <div className="text-center text-sm font-semibold text-slate-400">
+                  or
+                </div>
 
                 <div>
                   <label
@@ -431,7 +449,7 @@ const App = () => {
                     className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
                     placeholder="https://user:pass@bridge.simplefin.org/simplefin"
                     value={accessUrl}
-                    onChange={event => setAccessUrl(event.target.value)}
+                    onChange={(event) => setAccessUrl(event.target.value)}
                   />
                 </div>
 
@@ -445,7 +463,8 @@ const App = () => {
 
                 {accessPreview ? (
                   <p className="text-sm text-slate-400">
-                    Stored access link: <span className="font-mono">{accessPreview}</span>
+                    Stored access link:{' '}
+                    <span className="font-mono">{accessPreview}</span>
                   </p>
                 ) : null}
               </form>
@@ -464,11 +483,11 @@ const App = () => {
                     id="apprise-url"
                     className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
                     value={appriseApiUrl}
-                    onChange={event => setAppriseApiUrl(event.target.value)}
+                    onChange={(event) => setAppriseApiUrl(event.target.value)}
                   />
                   <p className="mt-2 text-xs text-slate-500">
-                    We&apos;ll append config keys or use direct URLs for each person so
-                    notifications land exactly where you expect.
+                    We&apos;ll append config keys or use direct URLs for each
+                    person so notifications land exactly where you expect.
                   </p>
                 </div>
 
@@ -487,8 +506,8 @@ const App = () => {
                   </div>
                   {targets.length === 0 ? (
                     <p className="rounded-lg border border-dashed border-slate-700 bg-slate-900/80 px-4 py-6 text-sm text-slate-400">
-                      Add at least one person or channel so Balance Bot knows who to nudge
-                      when something changes.
+                      Add at least one person or channel so Balance Bot knows
+                      who to nudge when something changes.
                     </p>
                   ) : null}
                   {targets.map((target, index) => (
@@ -497,7 +516,7 @@ const App = () => {
                       target={target}
                       index={index}
                       accounts={accounts}
-                      onChange={nextTarget => updateTarget(index, nextTarget)}
+                      onChange={(nextTarget) => updateTarget(index, nextTarget)}
                       onRemove={() => removeTarget(index)}
                     />
                   ))}
@@ -514,8 +533,9 @@ const App = () => {
 
                 {accounts.length === 0 ? (
                   <p className="text-sm text-amber-300">
-                    We&apos;ll unlock this step after SimpleFIN shares your accounts. Pop
-                    back up to step one if you haven&apos;t done that yet.
+                    We&apos;ll unlock this step after SimpleFIN shares your
+                    accounts. Pop back up to step one if you haven&apos;t done
+                    that yet.
                   </p>
                 ) : null}
               </div>
@@ -524,8 +544,8 @@ const App = () => {
             {currentStep === 3 ? (
               <div className="rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-4 text-emerald-200">
                 Nice work! Balance Bot is now watching {accounts.length} account
-                {accounts.length === 1 ? '' : 's'} and will deliver updates using the
-                targets above.
+                {accounts.length === 1 ? '' : 's'} and will deliver updates
+                using the targets above.
               </div>
             ) : null}
           </div>

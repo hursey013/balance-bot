@@ -24,7 +24,7 @@ const createConfigResponse = (overrides = {}) => ({
 });
 
 beforeEach(() => {
-  globalThis.fetch = vi.fn(url => {
+  globalThis.fetch = vi.fn((url) => {
     if (url === '/api/config') {
       return Promise.resolve({
         ok: true,
@@ -49,11 +49,13 @@ test('renders setup token input when onboarding has not run', async () => {
     expect(globalThis.fetch).toHaveBeenCalledWith('/api/config');
   });
 
-  expect(await screen.findByLabelText(/SimpleFIN setup token/i)).toBeInTheDocument();
+  expect(
+    await screen.findByLabelText(/SimpleFIN setup token/i),
+  ).toBeInTheDocument();
 });
 
 test('skips to notification step when SimpleFIN is already configured', async () => {
-  globalThis.fetch = vi.fn(url => {
+  globalThis.fetch = vi.fn((url) => {
     if (url === '/api/config') {
       return Promise.resolve({
         ok: true,

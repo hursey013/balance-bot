@@ -29,6 +29,9 @@ test('formatCurrency formats when possible and falls back gracefully', () => {
 });
 
 test('trimTrailingSlash tolerates falsy values', () => {
-  assert.equal(trimTrailingSlash('http://example.com///'), 'http://example.com');
+  assert.equal(
+    trimTrailingSlash('http://example.com///'),
+    'http://example.com',
+  );
   assert.equal(trimTrailingSlash(), '');
 });

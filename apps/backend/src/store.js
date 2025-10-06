@@ -16,7 +16,7 @@ const defaultState = () => ({ accounts: {} });
  * @param {string} filePath
  * @returns {{ save: () => Promise<void>, getLastBalance: (accountId: string) => Promise<number|null>, setLastBalance: (accountId: string, balance: number) => Promise<void> }}
  */
-const createStore = filePath => {
+const createStore = (filePath) => {
   const adapter = new JSONFile(filePath);
   const db = new Low(adapter, defaultState());
   let initialized = false;
@@ -29,7 +29,7 @@ const createStore = filePath => {
     }
   };
 
-  const getLastBalance = async accountId => {
+  const getLastBalance = async (accountId) => {
     await ensureDb();
     const entry = db.data.accounts[accountId];
     return typeof entry?.lastBalance === 'number' ? entry.lastBalance : null;

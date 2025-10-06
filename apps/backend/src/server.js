@@ -151,7 +151,7 @@ const start = async () => {
     logger.info('Balance Bot backend listening', { port });
   });
 
-  const shutdown = async signal => {
+  const shutdown = async (signal) => {
     logger.info('Received shutdown signal', { signal });
     server.close(async () => {
       await botService.stop();
@@ -163,7 +163,7 @@ const start = async () => {
   process.once('SIGTERM', shutdown);
 };
 
-start().catch(error => {
+start().catch((error) => {
   logger.error('Failed to start backend server', { error: error.message });
   process.exit(1);
 });

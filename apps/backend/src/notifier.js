@@ -33,7 +33,8 @@ const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   } catch (error) {
     if (error.response) {
       const { statusCode, body } = error.response;
-      const errorBody = typeof body === 'string' ? body : (body?.toString?.() ?? '');
+      const errorBody =
+        typeof body === 'string' ? body : (body?.toString?.() ?? '');
       throw new Error(
         `Apprise notification failed with status ${statusCode}: ${errorBody}`,
       );

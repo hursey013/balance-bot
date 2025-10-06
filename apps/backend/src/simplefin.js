@@ -8,7 +8,7 @@ import { trim, uniqueEntries } from './utils.js';
  * @param {string|undefined} value
  * @returns {{ token: string, claimUrl: string }}
  */
-const decodeSetupToken = value => {
+const decodeSetupToken = (value) => {
   const trimmed = trim(value);
   if (!trimmed) return { token: '', claimUrl: '' };
 
@@ -29,7 +29,9 @@ const decodeSetupToken = value => {
   try {
     claimUrl = new URL(decoded);
   } catch (error) {
-    throw new Error(`SimpleFIN setup token decoded to an invalid URL: ${error.message}`);
+    throw new Error(
+      `SimpleFIN setup token decoded to an invalid URL: ${error.message}`,
+    );
   }
 
   if (claimUrl.protocol !== 'https:') {
@@ -49,13 +51,16 @@ const exchangeSetupToken = async ({ claimUrl }) => {
     const { body } = await got.post(claimUrl, { retry: { limit: 0 } });
     const accessUrl = trim(body);
     if (!accessUrl) {
-      throw new Error('SimpleFIN token claim response did not include an access URL');
+      throw new Error(
+        'SimpleFIN token claim response did not include an access URL',
+      );
     }
     return { accessUrl, expiresAt: null };
   } catch (error) {
     if (error.response) {
       const { statusCode, body } = error.response;
-      const errorBody = typeof body === 'string' ? body : (body?.toString?.() ?? '');
+      const errorBody =
+        typeof body === 'string' ? body : (body?.toString?.() ?? '');
       throw new Error(
         `SimpleFIN token claim failed with status ${statusCode}: ${errorBody}`,
       );
@@ -69,9 +74,10 @@ const exchangeSetupToken = async ({ claimUrl }) => {
  * @param {string[]|undefined} accountIds
  * @returns {string}
  */
-const createCacheKey = accountIds => {
-  if (!Array.isArray(accountIds) || accountIds.length === 0) return 'accounts:all';
-  const cleanedIds = accountIds.map(id => `${id}`.trim()).filter(Boolean);
+const createCacheKey = (accountIds) => {
+  if (!Array.isArray(accountIds) || accountIds.length === 0)
+    return 'accounts:all';
+  const cleanedIds = accountIds.map((id) => `${id}`.trim()).filter(Boolean);
   const uniqueSortedIds = uniqueEntries(cleanedIds).sort();
   return uniqueSortedIds.length
     ? `accounts:${uniqueSortedIds.join(',')}`
@@ -87,7 +93,7 @@ const createCacheKey = accountIds => {
  * @param {string|undefined} filePath
  * @returns {{ get: (key: string, maxAgeMs?: number) => Promise<any>, set: (key: string, value: any) => Promise<void> }|null}
  */
-const createCacheStore = filePath => {
+const createCacheStore = (filePath) => {
   if (!filePath) return null;
 
   const adapter = new JSONFile(filePath);
@@ -158,7 +164,7 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
   const baseUrl = access.toString();
   const cache = cacheTtlMs > 0 ? createCacheStore(cacheFilePath) : null;
 
-  const readFromCache = async key => {
+  const readFromCache = async (key) => {
     if (!cache) return null;
     return cache.get(key, cacheTtlMs);
   };
@@ -174,7 +180,7 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
 
     if (Array.isArray(accountIds) && accountIds.length) {
       const uniqueIds = uniqueEntries(
-        accountIds.map(id => `${id}`.trim()).filter(Boolean),
+        accountIds.map((id) => `${id}`.trim()).filter(Boolean),
       );
       for (const id of uniqueIds) {
         requestUrl.searchParams.append('account', id);
@@ -198,7 +204,8 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
     } catch (error) {
       if (error.response) {
         const { statusCode, body } = error.response;
-        const errorBody = typeof body === 'string' ? body : (body?.toString?.() ?? '');
+        const errorBody =
+          typeof body === 'string' ? body : (body?.toString?.() ?? '');
         throw new Error(
           `SimpleFIN request failed with status ${statusCode}: ${errorBody}`,
         );
@@ -223,7 +230,11 @@ const createSimplefinApi = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 }) => {
  * @param {{ accessUrl?: string, cacheFilePath?: string, cacheTtlMs?: number }} [options]
  * @returns {{ fetchAccounts: (options?: { accountIds?: string[] }) => Promise<any[]>, getAccessInfo: () => any, setAccessUrl: (accessUrl: string) => void }}
  */
-const createSimplefinClient = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 } = {}) => {
+const createSimplefinClient = ({
+  accessUrl,
+  cacheFilePath,
+  cacheTtlMs = 0,
+} = {}) => {
   let currentAccessUrl = trim(accessUrl);
   let apiInstance = null;
 
@@ -269,7 +280,7 @@ const createSimplefinClient = ({ accessUrl, cacheFilePath, cacheTtlMs = 0 } = {}
    * @param {string} nextAccessUrl
    * @returns {void}
    */
-  const setAccessUrl = nextAccessUrl => {
+  const setAccessUrl = (nextAccessUrl) => {
     const trimmed = trim(nextAccessUrl);
     if (!trimmed) {
       throw new Error('Access URL must be a non-empty string');

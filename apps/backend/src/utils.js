@@ -3,14 +3,14 @@
  * @param {unknown} value
  * @returns {string}
  */
-const trim = value => value?.toString?.().trim?.() ?? '';
+const trim = (value) => value?.toString?.().trim?.() ?? '';
 
 /**
  * Normalize a cache TTL value in milliseconds, falling back to one hour.
  * @param {unknown} value
  * @returns {number}
  */
-const normalizeCacheTtl = value => {
+const normalizeCacheTtl = (value) => {
   const defaultTtl = 60 * 60 * 1000;
   if (value === undefined) {
     return defaultTtl;
@@ -27,7 +27,7 @@ const normalizeCacheTtl = value => {
  * @param {unknown} value
  * @returns {number|null}
  */
-const parseNumeric = value => {
+const parseNumeric = (value) => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'string') {
     const parsed = Number(value);
@@ -41,7 +41,7 @@ const parseNumeric = value => {
  * @param {Record<string, any>|undefined|null} account
  * @returns {{ amount: number, currency: string }|null}
  */
-const resolveBalanceInfo = account => {
+const resolveBalanceInfo = (account) => {
   if (!account) return null;
 
   const availableAmount = parseNumeric(account['available-balance']);
@@ -82,7 +82,7 @@ const formatCurrency = (amount, currency) => {
  * @param {T[]} items
  * @returns {T[]}
  */
-const uniqueEntries = items => Array.from(new Set(items));
+const uniqueEntries = (items) => Array.from(new Set(items));
 
 /**
  * Remove trailing forward slashes from a URL-like string.
@@ -96,7 +96,7 @@ const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
  * @param {string} value
  * @returns {string}
  */
-const redactAccessUrl = value => {
+const redactAccessUrl = (value) => {
   const trimmed = trim(value);
   if (!trimmed) return '';
   try {

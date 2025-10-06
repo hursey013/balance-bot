@@ -6,11 +6,17 @@ import { createConfig, DEFAULT_DATA_DIR } from '../src/config.js';
 test('createConfig returns defaults when persisted config is empty', () => {
   const config = createConfig();
   assert.equal(config.simplefin.accessUrl, '');
-  assert.equal(config.simplefin.cacheFilePath, path.join(DEFAULT_DATA_DIR, 'cache.json'));
+  assert.equal(
+    config.simplefin.cacheFilePath,
+    path.join(DEFAULT_DATA_DIR, 'cache.json'),
+  );
   assert.equal(config.simplefin.cacheTtlMs, 60 * 60 * 1000);
   assert.equal(config.polling.cronExpression, '0 * * * *');
   assert.equal(config.notifier.appriseApiUrl, 'http://apprise:8000/notify');
-  assert.equal(config.storage.stateFilePath, path.join(DEFAULT_DATA_DIR, 'state.json'));
+  assert.equal(
+    config.storage.stateFilePath,
+    path.join(DEFAULT_DATA_DIR, 'state.json'),
+  );
   assert.deepEqual(config.notifications.targets, []);
 });
 
@@ -50,7 +56,10 @@ test('createConfig merges persisted overrides', () => {
   );
   assert.equal(config.simplefin.cacheTtlMs, 5000);
   assert.equal(config.polling.cronExpression, '*/15 * * * *');
-  assert.equal(config.notifier.appriseApiUrl, 'http://apprise.local:8000/notify');
+  assert.equal(
+    config.notifier.appriseApiUrl,
+    'http://apprise.local:8000/notify',
+  );
   assert.equal(
     config.storage.stateFilePath,
     path.join(DEFAULT_DATA_DIR, 'tmp/state.json'),

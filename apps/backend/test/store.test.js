@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import createStore from '../src/store.js';
 
-test('state store persists balances to disk', async t => {
+test('state store persists balances to disk', async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'balance-bot-state-'));
   const filePath = path.join(dir, 'state.json');
 
@@ -23,7 +23,7 @@ test('state store persists balances to disk', async t => {
   assert.equal(await reopened.getLastBalance('acct-1'), 123.45);
 });
 
-test('state store save flushes data without duplicates', async t => {
+test('state store save flushes data without duplicates', async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'balance-bot-state-'));
   const filePath = path.join(dir, 'state.json');
 

@@ -13,7 +13,7 @@ import { BalanceMonitor } from '../../src/index.js';
 
 nock.disableNetConnect();
 
-const withTempDir = async t => {
+const withTempDir = async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'balance-bot-int-'));
   t.after(async () => {
     await fs.rm(dir, { recursive: true, force: true });
@@ -21,7 +21,7 @@ const withTempDir = async t => {
   return dir;
 };
 
-test('balance monitor integrates simplefin, store, and notifier', async t => {
+test('balance monitor integrates simplefin, store, and notifier', async (t) => {
   t.after(() => {
     if (!nock.isDone()) {
       const pending = nock.pendingMocks();

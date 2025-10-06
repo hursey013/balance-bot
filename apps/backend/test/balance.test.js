@@ -24,7 +24,7 @@ test('balance monitor notifies when balances change', async () => {
   ];
 
   const simplefinClient = {
-    fetchAccounts: async args => {
+    fetchAccounts: async (args) => {
       fetchArgs.push(args);
       return accountSnapshots.shift() ?? [];
     },
@@ -32,14 +32,14 @@ test('balance monitor notifies when balances change', async () => {
 
   const sentNotifications = [];
   const notifier = {
-    sendNotification: async payload => {
+    sendNotification: async (payload) => {
       sentNotifications.push(payload);
     },
   };
 
   const balances = new Map();
   const store = {
-    getLastBalance: async id => (balances.has(id) ? balances.get(id) : null),
+    getLastBalance: async (id) => (balances.has(id) ? balances.get(id) : null),
     setLastBalance: async (id, value) => {
       balances.set(id, value);
     },
@@ -50,7 +50,8 @@ test('balance monitor notifies when balances change', async () => {
   const logger = {
     info: (message, meta) => logEntries.push({ level: 'info', message, meta }),
     warn: (message, meta) => logEntries.push({ level: 'warn', message, meta }),
-    error: (message, meta) => logEntries.push({ level: 'error', message, meta }),
+    error: (message, meta) =>
+      logEntries.push({ level: 'error', message, meta }),
   };
 
   const monitor = new BalanceMonitor({
@@ -92,13 +93,13 @@ test('balance monitor notifies when balances change', async () => {
   assert.equal(balances.get('acct-1'), 150.5);
 
   assert.equal(monitor.isRunning(), false);
-  assert(logEntries.some(entry => entry.level === 'info'));
+  assert(logEntries.some((entry) => entry.level === 'info'));
 });
 
 test('balance monitor fetches all accounts when wildcard target is present', async () => {
   const fetchArgs = [];
   const simplefinClient = {
-    fetchAccounts: async args => {
+    fetchAccounts: async (args) => {
       fetchArgs.push(args);
       return [
         {

@@ -6,7 +6,9 @@ import path from 'node:path';
 import { ConfigStore } from '../src/config.js';
 
 const createTempPath = async () => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'balance-bot-config-store-'));
+  const dir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'balance-bot-config-store-'),
+  );
   return {
     dir,
     file: path.join(dir, 'config.json'),
@@ -35,7 +37,9 @@ test('returns defaults when config file is missing', async () => {
 
 test('stores simplefin access url in config', async () => {
   const store = new ConfigStore({ filePath: temp.file });
-  await store.setSimplefinAccess('https://user:pass@bridge.simplefin.org/simplefin');
+  await store.setSimplefinAccess(
+    'https://user:pass@bridge.simplefin.org/simplefin',
+  );
   const config = await store.get();
   assert.equal(
     config.simplefin.accessUrl,

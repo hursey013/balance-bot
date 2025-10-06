@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "build": "node -e \"console.log('Nothing to build for backend')\"",
-    "lint": "eslint src test --max-warnings=0 --fix",
+    "lint": "prettier --log-level warn --write \"src/**/*.{js,mjs}\" \"test/**/*.js\" && eslint src test --max-warnings=0 --fix",
     "test": "node --test --test-concurrency=1"
   },
   "dependencies": {

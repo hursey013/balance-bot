@@ -16,7 +16,7 @@ const withTempDir = async (t, prefix) => {
   return dir;
 };
 
-const baseSimplefinScope = t => {
+const baseSimplefinScope = (t) => {
   t.after(() => {
     if (!nock.isDone()) {
       const pending = nock.pendingMocks();
@@ -26,7 +26,7 @@ const baseSimplefinScope = t => {
   });
 };
 
-test('SimpleFIN client caches results when TTL is positive', async t => {
+test('SimpleFIN client caches results when TTL is positive', async (t) => {
   baseSimplefinScope(t);
   const tempDir = await withTempDir(t, 'balance-bot-cache-');
   const cachePath = path.join(tempDir, 'cache.json');
@@ -37,7 +37,10 @@ test('SimpleFIN client caches results when TTL is positive', async t => {
     .query({ 'balances-only': '1' })
     .reply(() => {
       callCount += 1;
-      return [200, { accounts: [{ id: 'acct-1', balance: '100', currency: 'USD' }] }];
+      return [
+        200,
+        { accounts: [{ id: 'acct-1', balance: '100', currency: 'USD' }] },
+      ];
     });
 
   const client = createSimplefinApi({
@@ -53,7 +56,7 @@ test('SimpleFIN client caches results when TTL is positive', async t => {
   assert.equal(callCount, 1);
 });
 
-test('SimpleFIN client bypasses cache when TTL is zero', async t => {
+test('SimpleFIN client bypasses cache when TTL is zero', async (t) => {
   baseSimplefinScope(t);
   const tempDir = await withTempDir(t, 'balance-bot-cache-');
   const cachePath = path.join(tempDir, 'cache.json');
@@ -80,7 +83,7 @@ test('SimpleFIN client bypasses cache when TTL is zero', async t => {
   assert.notDeepEqual(first, second);
 });
 
-test('SimpleFIN client includes Basic Auth credentials', async t => {
+test('SimpleFIN client includes Basic Auth credentials', async (t) => {
   baseSimplefinScope(t);
   const tempDir = await withTempDir(t, 'balance-bot-cache-');
   const cachePath = path.join(tempDir, 'cache.json');
@@ -102,10 +105,13 @@ test('SimpleFIN client includes Basic Auth credentials', async t => {
 
   await client.fetchAccounts();
 
-  assert.equal(lastAuth, `Basic ${Buffer.from('name:secret').toString('base64')}`);
+  assert.equal(
+    lastAuth,
+    `Basic ${Buffer.from('name:secret').toString('base64')}`,
+  );
 });
 
-test('SimpleFIN client does not double-append accounts path', async t => {
+test('SimpleFIN client does not double-append accounts path', async (t) => {
   baseSimplefinScope(t);
   const tempDir = await withTempDir(t, 'balance-bot-cache-');
   const cachePath = path.join(tempDir, 'cache.json');
@@ -130,7 +136,7 @@ test('SimpleFIN client does not double-append accounts path', async t => {
   assert(requestedPath.endsWith('/simplefin/accounts?balances-only=1'));
 });
 
-test('SimpleFIN client throws when SimpleFIN responds without accounts', async t => {
+test('SimpleFIN client throws when SimpleFIN responds without accounts', async (t) => {
   baseSimplefinScope(t);
   const tempDir = await withTempDir(t, 'balance-bot-cache-');
   const cachePath = path.join(tempDir, 'cache.json');
@@ -149,7 +155,7 @@ test('SimpleFIN client throws when SimpleFIN responds without accounts', async t
   await assert.rejects(() => client.fetchAccounts(), /missing accounts array/i);
 });
 
-test('SimpleFIN client surfaces HTTP failures', async t => {
+test('SimpleFIN client surfaces HTTP failures', async (t) => {
   baseSimplefinScope(t);
   const tempDir = await withTempDir(t, 'balance-bot-cache-');
   const cachePath = path.join(tempDir, 'cache.json');
@@ -171,13 +177,13 @@ test('SimpleFIN client surfaces HTTP failures', async t => {
   );
 });
 
-test('createSimplefinClient requires an access URL', async t => {
+test('createSimplefinClient requires an access URL', async (t) => {
   baseSimplefinScope(t);
   const client = createSimplefinClient();
   await assert.rejects(() => client.fetchAccounts(), /access URL is required/i);
 });
 
-test('createSimplefinClient fetches accounts when configured', async t => {
+test('createSimplefinClient fetches accounts when configured', async (t) => {
   baseSimplefinScope(t);
 
   nock('https://bridge.simplefin.org')
@@ -194,7 +200,7 @@ test('createSimplefinClient fetches accounts when configured', async t => {
   assert.deepEqual(result, [{ id: 'acct-123' }]);
 });
 
-test('createSimplefinClient updates access URL via setAccessUrl', async t => {
+test('createSimplefinClient updates access URL via setAccessUrl', async (t) => {
   baseSimplefinScope(t);
 
   const firstScope = nock('https://bridge.simplefin.org')

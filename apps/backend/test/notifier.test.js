@@ -5,7 +5,7 @@ import createNotifier from '../src/notifier.js';
 
 nock.disableNetConnect();
 
-const ensureNoPendingNocks = t => {
+const ensureNoPendingNocks = (t) => {
   t.after(() => {
     if (!nock.isDone()) {
       const pending = nock.pendingMocks();
@@ -15,12 +15,12 @@ const ensureNoPendingNocks = t => {
   });
 };
 
-test('notifier posts notifications with supplied URLs', async t => {
+test('notifier posts notifications with supplied URLs', async (t) => {
   ensureNoPendingNocks(t);
 
   let capturedPayload;
   nock('http://apprise:8000')
-    .post('/notify', body => {
+    .post('/notify', (body) => {
       capturedPayload = body;
       return true;
     })
@@ -41,12 +41,12 @@ test('notifier posts notifications with supplied URLs', async t => {
   assert.deepEqual(capturedPayload.urls, ['pover://token@user/']);
 });
 
-test('notifier targets config keys without duplicating URLs', async t => {
+test('notifier targets config keys without duplicating URLs', async (t) => {
   ensureNoPendingNocks(t);
 
   let capturedPayload;
   nock('http://apprise:8000')
-    .post('/kids', body => {
+    .post('/kids', (body) => {
       capturedPayload = body;
       return true;
     })

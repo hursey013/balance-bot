@@ -15,26 +15,29 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../..');
  * @param {T} value
  * @returns {T}
  */
-const clone = value => structuredClone(value);
+const clone = (value) => structuredClone(value);
 
 /**
  * Normalize notification targets by trimming identifiers and removing duplicates.
  * @param {Array<Record<string, any>>|undefined} targets
  * @returns {Array<Record<string, any>>}
  */
-const sanitizeTargets = targets => {
+const sanitizeTargets = (targets) => {
   if (!Array.isArray(targets)) return [];
-  const uniqueTrimmed = items => {
+  const uniqueTrimmed = (items) => {
     if (!Array.isArray(items)) return [];
-    const trimmedItems = items.map(value => trim(value)).filter(Boolean);
+    const trimmedItems = items.map((value) => trim(value)).filter(Boolean);
     return Array.from(new Set(trimmedItems));
   };
 
-  return targets.map(target => {
+  return targets.map((target) => {
     const accountIds = uniqueTrimmed(target.accountIds);
     const appriseUrls = uniqueTrimmed(target.appriseUrls);
-    const appriseConfigKey = target.appriseConfigKey ? trim(target.appriseConfigKey) : '';
-    const name = typeof target.name === 'string' ? target.name.trim() : target.name;
+    const appriseConfigKey = target.appriseConfigKey
+      ? trim(target.appriseConfigKey)
+      : '';
+    const name =
+      typeof target.name === 'string' ? target.name.trim() : target.name;
 
     const sanitized = {
       ...target,
@@ -176,7 +179,10 @@ export const createConfig = ({ persisted = {} } = {}) => {
   return {
     simplefin: {
       accessUrl: trim(merged.simplefin.accessUrl),
-      cacheFilePath: resolvePath(merged.simplefin.cacheFilePath, DEFAULT_CACHE_FILE),
+      cacheFilePath: resolvePath(
+        merged.simplefin.cacheFilePath,
+        DEFAULT_CACHE_FILE,
+      ),
       cacheTtlMs,
     },
     notifier: {
@@ -189,7 +195,10 @@ export const createConfig = ({ persisted = {} } = {}) => {
       cronExpression: trim(merged.polling.cronExpression) || DEFAULT_CRON,
     },
     storage: {
-      stateFilePath: resolvePath(merged.storage.stateFilePath, DEFAULT_STATE_FILE),
+      stateFilePath: resolvePath(
+        merged.storage.stateFilePath,
+        DEFAULT_STATE_FILE,
+      ),
     },
     metadata: {
       filePath: resolvePath(merged.metadata.filePath, DEFAULT_CONFIG_FILE),
@@ -246,7 +255,9 @@ class ConfigStore {
    */
   async _write(data) {
     const payload = clone(data);
-    payload.notifications.targets = sanitizeTargets(payload.notifications.targets);
+    payload.notifications.targets = sanitizeTargets(
+      payload.notifications.targets,
+    );
     await atomicWriteJson(this.filePath, payload);
     logger.info('Persisted configuration', { filePath: this.filePath });
   }
@@ -288,7 +299,7 @@ class ConfigStore {
       throw new Error('Access URL must be provided');
     }
 
-    return this.update(async current => ({
+    return this.update(async (current) => ({
       ...current,
       simplefin: {
         ...current.simplefin,
@@ -303,7 +314,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setAppriseApiUrl(appriseApiUrl) {
-    return this.update(async current => ({
+    return this.update(async (current) => ({
       ...current,
       notifier: {
         ...current.notifier,
@@ -318,7 +329,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setCronExpression(cronExpression) {
-    return this.update(async current => ({
+    return this.update(async (current) => ({
       ...current,
       polling: {
         ...current.polling,
@@ -333,7 +344,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setNotificationTargets(targets) {
-    return this.update(async current => ({
+    return this.update(async (current) => ({
       ...current,
       notifications: {
         ...current.notifications,
@@ -348,7 +359,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setConfig({ appriseApiUrl, cronExpression, targets }) {
-    return this.update(async current => ({
+    return this.update(async (current) => ({
       ...current,
       notifier: {
         ...current.notifier,

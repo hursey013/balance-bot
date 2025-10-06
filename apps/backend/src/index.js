@@ -21,13 +21,15 @@ class BalanceMonitor {
       : [];
     this.targets = targets;
 
-    const accountIds = targets.flatMap(target =>
+    const accountIds = targets.flatMap((target) =>
       Array.isArray(target.accountIds) ? target.accountIds : [],
     );
 
-    this.explicitAccountIds = uniqueEntries(accountIds.filter(id => id && id !== '*'));
+    this.explicitAccountIds = uniqueEntries(
+      accountIds.filter((id) => id && id !== '*'),
+    );
     this.hasWildcardTargets = accountIds.includes('*');
-    this.wildcardTargetCount = targets.filter(target => {
+    this.wildcardTargetCount = targets.filter((target) => {
       if (!Array.isArray(target.accountIds)) return false;
       return target.accountIds.includes('*');
     }).length;
@@ -54,7 +56,9 @@ class BalanceMonitor {
    */
   async runOnce() {
     if (this.running) {
-      this.log.warn('Skipping balance check because the previous run is still running');
+      this.log.warn(
+        'Skipping balance check because the previous run is still running',
+      );
       return false;
     }
 
@@ -171,9 +175,11 @@ class BalanceMonitor {
 
   /** @private */
   #selectTargets(accountId) {
-    return this.targets.filter(target => {
+    return this.targets.filter((target) => {
       if (!Array.isArray(target.accountIds)) return false;
-      return target.accountIds.includes(accountId) || target.accountIds.includes('*');
+      return (
+        target.accountIds.includes(accountId) || target.accountIds.includes('*')
+      );
     });
   }
 }
@@ -208,7 +214,9 @@ class BalanceBotService {
     const config = createConfig({ persisted });
 
     if (!config.simplefin.accessUrl) {
-      logger.warn('SimpleFIN access URL not configured yet. Waiting for onboarding.');
+      logger.warn(
+        'SimpleFIN access URL not configured yet. Waiting for onboarding.',
+      );
       await this._teardown();
       return;
     }
@@ -248,7 +256,7 @@ class BalanceBotService {
     });
 
     const queueCheck = () =>
-      this.balanceMonitor.runOnce().catch(error => {
+      this.balanceMonitor.runOnce().catch((error) => {
         logger.error('Balance check failed', { error: error.message });
       });
 
