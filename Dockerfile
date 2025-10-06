@@ -21,7 +21,6 @@ COPY --from=builder /app/apps/frontend/package.json apps/frontend/
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/apps/backend/src apps/backend/src
-COPY --from=builder /app/apps/backend/scripts apps/backend/scripts
 COPY --from=builder /app/apps/frontend/dist apps/frontend/dist
 COPY --from=builder /app/logo.svg ./logo.svg
 COPY --from=builder /app/eslint.config.js ./eslint.config.js

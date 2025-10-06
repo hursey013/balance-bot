@@ -53,6 +53,8 @@ jobs:
         with:
           context: .
           tags: ghcr.io/${{ github.repository_owner }}/balance-bot:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           load: true
 
       - name: Run lint and tests inside container
