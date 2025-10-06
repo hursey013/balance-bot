@@ -136,7 +136,14 @@ const splitUrls = (value) =>
  * Edit a single notification target in the onboarding flow.
  * @param {{ target: Target, index: number, accounts: Account[], onChange: (target: Target) => void, onRemove: () => void }} props
  */
-const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
+const TargetEditor = ({
+  target,
+  index,
+  accounts,
+  onChange,
+  onRemove,
+  collapseVersion,
+}) => {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -271,6 +278,12 @@ const TargetEditor = ({ target, index, accounts, onChange, onRemove }) => {
       setOpen(false);
     }
   }, [collapsed]);
+
+  useEffect(() => {
+    if (collapseVersion > 0) {
+      setCollapsed(true);
+    }
+  }, [collapseVersion]);
 
   const toggleAccount = (accountId) => {
     if (accountId === '*') {
@@ -624,6 +637,7 @@ const App = () => {
   const [accessPreview, setAccessPreview] = useState(null);
   const isAdminView = currentStep === 3;
   const successMessageRef = useRef(null);
+  const [collapseVersion, setCollapseVersion] = useState(0);
   const hasTargetChanges = useMemo(
     () => JSON.stringify(targets) !== JSON.stringify(lastSavedTargets),
     [targets, lastSavedTargets],
@@ -785,6 +799,7 @@ const App = () => {
       setLastSavedTargets(savedTargets);
       setAppriseApiUrl(data.notifier.appriseApiUrl);
       setMessage('All set! Your crew will get updates as balances change.');
+      setCollapseVersion((value) => value + 1);
     } catch (saveError) {
       setError(
         saveError.message ||
@@ -847,16 +862,16 @@ const App = () => {
             </h1>
             <p className="max-w-2xl text-slate-400">
               We&apos;ll gather your SimpleFIN access and Apprise endpoint, then
-              hand things over to the notification dashboard.
+              hand things over to the notification dashboard.{' '}
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+              >
+                View the project on GitHub
+              </a>
             </p>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="text-sm font-medium text-primary underline-offset-2 hover:underline"
-            >
-              View the project on GitHub
-            </a>
           </header>
         )}
 
@@ -1040,6 +1055,7 @@ const App = () => {
                       accounts={accounts}
                       onChange={(nextTarget) => updateTarget(index, nextTarget)}
                       onRemove={() => removeTarget(index)}
+                      collapseVersion={collapseVersion}
                     />
                   ))}
                 </div>
