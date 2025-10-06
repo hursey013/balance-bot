@@ -82,12 +82,3 @@ services:
 ```
 
 Once the containers settle, visit [http://localhost:4000](http://localhost:4000) (replace `localhost` with your NAS IP if needed). That’s your command center.
-
-## Take the Setup Tour
-
-1. **Share your SimpleFIN link.** Paste your setup token or access link. We swap it for the secure, long-term key and fetch your accounts.
-2. **Tag your kids (and yourself).** For each person, choose the accounts they should hear about. Mix and match Apprise URLs, config keys, or both.
-3. **Choose how the note should sound.** Write a friendly label for each person so the alerts read just right.
-4. **Hit “Save recipients.”** Balance-bot tucks everything into its data folder and starts watching your balances straight away.
-
-Need to make a change later? Revisit the site anytime.
