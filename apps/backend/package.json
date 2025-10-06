@@ -1,0 +1,24 @@
+{
+  "name": "@balance-bot/backend",
+  "version": "1.1.0",
+  "description": "Backend service for Balance Bot, handling SimpleFIN polling and notification orchestration.",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "build": "node -e \"console.log('Nothing to build for backend')\"",
+    "lint": "prettier --log-level warn --write \"src/**/*.{js,mjs}\" \"test/**/*.js\" && eslint src test --max-warnings=0 --fix",
+    "test": "node --test --test-concurrency=1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "got": "^14.4.9",
+    "lowdb": "^7.0.1",
+    "node-cron": "^3.0.3",
+    "pino": "^10.0.0"
+  },
+  "devDependencies": {
+    "nock": "^14.0.10"
+  }
+}

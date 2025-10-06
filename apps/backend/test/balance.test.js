@@ -1,24 +1,24 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import createBalanceProcessor from "../src/balance.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { BalanceMonitor } from '../src/index.js';
 
-test("balance processor notifies when balances change", async () => {
+test('balance monitor notifies when balances change', async () => {
   const fetchArgs = [];
   const accountSnapshots = [
     [
       {
-        id: "acct-1",
-        name: "Primary",
-        balance: "100.00",
-        currency: "USD",
+        id: 'acct-1',
+        name: 'Primary',
+        balance: '100.00',
+        currency: 'USD',
       },
     ],
     [
       {
-        id: "acct-1",
-        name: "Primary",
-        balance: "150.50",
-        currency: "USD",
+        id: 'acct-1',
+        name: 'Primary',
+        balance: '150.50',
+        currency: 'USD',
       },
     ],
   ];
@@ -48,65 +48,65 @@ test("balance processor notifies when balances change", async () => {
 
   const logEntries = [];
   const logger = {
-    info: (message, meta) => logEntries.push({ level: "info", message, meta }),
-    warn: (message, meta) => logEntries.push({ level: "warn", message, meta }),
+    info: (message, meta) => logEntries.push({ level: 'info', message, meta }),
+    warn: (message, meta) => logEntries.push({ level: 'warn', message, meta }),
     error: (message, meta) =>
-      logEntries.push({ level: "error", message, meta }),
+      logEntries.push({ level: 'error', message, meta }),
   };
 
-  const balance = createBalanceProcessor({
+  const monitor = new BalanceMonitor({
     simplefinClient,
     notifier,
-    store,
+    stateStore: store,
     config: {
-      polling: { cronExpression: "*/5 * * * *" },
+      polling: { cronExpression: '*/5 * * * *' },
       notifications: {
         targets: [
           {
-            name: "Test",
-            accountIds: ["acct-1"],
-            appriseUrls: ["pover://token@user"],
+            name: 'Test',
+            accountIds: ['acct-1'],
+            appriseUrls: ['pover://token@user'],
             appriseConfigKey: null,
           },
         ],
       },
     },
-    logger,
+    log: logger,
   });
 
-  await balance.checkBalances();
+  await monitor.runOnce();
 
   assert.equal(fetchArgs.length, 1);
-  assert.deepEqual(fetchArgs[0], { accountIds: ["acct-1"] });
+  assert.deepEqual(fetchArgs[0], { accountIds: ['acct-1'] });
   assert.equal(sentNotifications.length, 0);
-  assert.equal(balances.get("acct-1"), 100);
+  assert.equal(balances.get('acct-1'), 100);
 
-  await balance.checkBalances();
+  await monitor.runOnce();
 
   assert.equal(fetchArgs.length, 2);
   assert.equal(sentNotifications.length, 1);
   const [notification] = sentNotifications;
-  assert.equal(notification.title, "Balance update");
-  assert(notification.body.includes("👤 Primary"));
-  assert(notification.body.includes("📈 <font color=\"#007700\">"));
-  assert(notification.body.includes("💰 $150.50"));
-  assert.equal(balances.get("acct-1"), 150.5);
+  assert.equal(notification.title, 'Balance update');
+  assert(notification.body.includes('👤 Primary'));
+  assert(notification.body.includes('📈 <font color="#007700">'));
+  assert(notification.body.includes('💰 $150.50'));
+  assert.equal(balances.get('acct-1'), 150.5);
 
-  assert.equal(balance.isRunning(), false);
-  assert(logEntries.some((entry) => entry.level === "info"));
+  assert.equal(monitor.isRunning(), false);
+  assert(logEntries.some((entry) => entry.level === 'info'));
 });
 
-test("balance processor fetches all accounts when wildcard target is present", async () => {
+test('balance monitor fetches all accounts when wildcard target is present', async () => {
   const fetchArgs = [];
   const simplefinClient = {
     fetchAccounts: async (args) => {
       fetchArgs.push(args);
       return [
         {
-          id: "acct-1",
-          name: "Allowances",
-          balance: "15.00",
-          currency: "USD",
+          id: 'acct-1',
+          name: 'Allowances',
+          balance: '15.00',
+          currency: 'USD',
         },
       ];
     },
@@ -125,24 +125,24 @@ test("balance processor fetches all accounts when wildcard target is present", a
     },
   };
 
-  const balance = createBalanceProcessor({
+  const monitor = new BalanceMonitor({
     simplefinClient,
     notifier,
-    store,
+    stateStore: store,
     config: {
       notifications: {
         targets: [
           {
-            name: "Everyone",
-            accountIds: ["*"],
-            appriseUrls: ["pover://token@user"],
+            name: 'Everyone',
+            accountIds: ['*'],
+            appriseUrls: ['pover://token@user'],
           },
         ],
       },
     },
   });
 
-  await balance.checkBalances();
+  await monitor.runOnce();
 
   assert.equal(fetchArgs.length, 1);
   assert.equal(fetchArgs[0], undefined);

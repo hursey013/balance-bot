@@ -1,25 +1,35 @@
-FROM node:22-alpine
-
-# Optionally embed the git commit at build time: --build-arg GIT_SHA=$(git rev-parse --short=12 HEAD)
-ARG GIT_SHA
-ENV GIT_COMMIT=${GIT_SHA}
-
+FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Install deps to a container-only node_modules (kept off your host via anonymous volume)
-COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm i; fi
+COPY package.json package-lock.json ./
+COPY apps/backend/package.json apps/backend/
+COPY apps/frontend/package.json apps/frontend/
+RUN npm ci
 
-# Ensure timezone data is available so TZ env works on Alpine
-RUN apk add --no-cache tzdata
+COPY . .
+RUN npm run build
 
-# Copy source (will be overridden by bind mount at runtime, but helps first build)
-COPY src ./src
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production \
+    BALANCE_BOT_DATA_DIR=/app/data
 
-# Non-root user for safety
-RUN addgroup -S app && adduser -S app -G app && \
-    mkdir -p /app/data && chown -R app:app /app
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package-lock.json ./
+COPY --from=builder /app/apps/backend/package.json apps/backend/
+COPY --from=builder /app/apps/frontend/package.json apps/frontend/
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/apps/backend/src apps/backend/src
+COPY --from=builder /app/apps/backend/scripts apps/backend/scripts
+COPY --from=builder /app/apps/frontend/dist apps/frontend/dist
+COPY --from=builder /app/logo.svg ./logo.svg
+COPY --from=builder /app/eslint.config.js ./eslint.config.js
+
+RUN apk add --no-cache tzdata \
+  && addgroup -S app && adduser -S app -G app \
+  && mkdir -p /app/data && chown -R app:app /app
+
 USER app
-
-ENV NODE_ENV=production
-CMD ["npm", "start"]
+EXPOSE 4000
+CMD ["npm", "run", "start", "--workspace=@balance-bot/backend"]

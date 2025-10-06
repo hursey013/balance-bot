@@ -1,5 +1,5 @@
-import got from "got";
-import { trimTrailingSlash } from "./utils.js";
+import got from 'got';
+import { trimTrailingSlash } from './utils.js';
 
 /**
  * @typedef {object} NotificationPayload
@@ -9,11 +9,16 @@ import { trimTrailingSlash } from "./utils.js";
  * @property {string|undefined} configKey
  */
 
+/**
+ * Deliver a notification payload to Apprise.
+ * @param {{ appriseApiUrl: string, urls?: string[], title: string, body: string }} params
+ * @returns {Promise<void>}
+ */
 const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   const payload = {
     title,
     body,
-    format: "html",
+    format: 'html',
   };
 
   if (Array.isArray(urls) && urls.length) {
@@ -28,7 +33,8 @@ const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   } catch (error) {
     if (error.response) {
       const { statusCode, body } = error.response;
-      const errorBody = typeof body === "string" ? body : body?.toString?.() ?? "";
+      const errorBody =
+        typeof body === 'string' ? body : (body?.toString?.() ?? '');
       throw new Error(
         `Apprise notification failed with status ${statusCode}: ${errorBody}`,
       );
@@ -37,9 +43,14 @@ const postNotification = async ({ appriseApiUrl, urls, title, body }) => {
   }
 };
 
+/**
+ * Build a notifier that delivers messages through Apprise.
+ * @param {{ appriseApiUrl: string }} params
+ * @returns {{ sendNotification: (payload: NotificationPayload) => Promise<void> }}
+ */
 const createNotifier = ({ appriseApiUrl }) => {
   if (!appriseApiUrl) {
-    throw new Error("Apprise API URL is required");
+    throw new Error('Apprise API URL is required');
   }
 
   const baseUrl = trimTrailingSlash(appriseApiUrl);
@@ -47,11 +58,16 @@ const createNotifier = ({ appriseApiUrl }) => {
   /**
    * @param {NotificationPayload} options
    */
+  /**
+   * Submit a single notification to Apprise using direct URLs or a config key.
+   * @param {NotificationPayload} param0
+   * @returns {Promise<void>}
+   */
   const sendNotification = async ({ title, body, urls, configKey }) => {
     const targets = Array.isArray(urls) ? urls.filter(Boolean) : [];
-    const key = configKey ? configKey.trim() : "";
+    const key = configKey ? configKey.trim() : '';
     if (!targets.length && !key) {
-      throw new Error("No Apprise destination provided for notification.");
+      throw new Error('No Apprise destination provided for notification.');
     }
 
     const endpoint = key ? `${baseUrl}/${encodeURIComponent(key)}` : baseUrl;

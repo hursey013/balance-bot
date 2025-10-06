@@ -1,10 +1,14 @@
-import { Low } from "lowdb";
-import { JSONFile } from "lowdb/node";
+import { Low } from 'lowdb';
+import { JSONFile } from 'lowdb/node';
 
 /**
  * @typedef {{ accounts: Record<string, { lastBalance: number }> }} BalanceState
  */
 
+/**
+ * Provide the default persisted balance structure.
+ * @returns {BalanceState}
+ */
 const defaultState = () => ({ accounts: {} });
 
 /**
@@ -28,7 +32,7 @@ const createStore = (filePath) => {
   const getLastBalance = async (accountId) => {
     await ensureDb();
     const entry = db.data.accounts[accountId];
-    return typeof entry?.lastBalance === "number" ? entry.lastBalance : null;
+    return typeof entry?.lastBalance === 'number' ? entry.lastBalance : null;
   };
 
   const setLastBalance = async (accountId, balance) => {
