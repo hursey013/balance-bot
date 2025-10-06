@@ -21,6 +21,10 @@ const createConfigResponse = (overrides = {}) => ({
     cronExpression: '0 * * * *',
     ...overrides.polling,
   },
+  onboarding: {
+    appriseConfigured: false,
+    ...overrides.onboarding,
+  },
 });
 
 beforeEach(() => {
@@ -54,7 +58,7 @@ test('renders setup token input when onboarding has not run', async () => {
   ).toBeInTheDocument();
 });
 
-test('skips to notification step when SimpleFIN is already configured', async () => {
+test('prompts for Apprise when SimpleFIN is already configured', async () => {
   globalThis.fetch = vi.fn((url) => {
     if (url === '/api/config') {
       return Promise.resolve({
@@ -82,6 +86,41 @@ test('skips to notification step when SimpleFIN is already configured', async ()
   render(<App />);
 
   expect(
-    await screen.findByText(/Who should hear about balances\?/i),
+    await screen.findByLabelText(/Apprise API endpoint/i),
+  ).toBeInTheDocument();
+});
+
+test('shows notification management when onboarding is finished', async () => {
+  globalThis.fetch = vi.fn((url) => {
+    if (url === '/api/config') {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            createConfigResponse({
+              simplefin: {
+                configured: true,
+                accessUrlPreview: 'https://redacted',
+              },
+              onboarding: {
+                appriseConfigured: true,
+              },
+            }),
+          ),
+      });
+    }
+    if (url === '/api/simplefin/accounts') {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ accounts: [{ id: 'acct-1' }] }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
+
+  render(<App />);
+
+  expect(
+    await screen.findByText(/Notification recipients/i),
   ).toBeInTheDocument();
 });

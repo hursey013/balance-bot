@@ -81,6 +81,10 @@ const DEFAULT_CACHE_FILE = path.join(DEFAULT_DATA_DIR, 'cache.json');
 const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, 'config.json');
 const DEFAULT_APPRISE_URL = 'http://apprise:8000/notify';
 const DEFAULT_CRON = '0 * * * *';
+const DEFAULT_ONBOARDING_STATE = {
+  appriseConfigured: false,
+  completed: false,
+};
 
 /**
  * Resolve a config path relative to the data directory when needed.
@@ -122,6 +126,9 @@ const defaultConfigTemplate = ({ filePath }) => ({
   },
   metadata: {
     filePath,
+    onboarding: {
+      ...DEFAULT_ONBOARDING_STATE,
+    },
   },
 });
 
@@ -159,6 +166,10 @@ const applyDefaults = (persisted = {}, { filePath }) => {
     metadata: {
       ...defaults.metadata,
       ...(persisted.metadata ?? {}),
+      onboarding: {
+        ...defaults.metadata.onboarding,
+        ...(((persisted.metadata ?? {}).onboarding) ?? {}),
+      },
     },
   };
 
@@ -202,6 +213,10 @@ export const createConfig = ({ persisted = {} } = {}) => {
     },
     metadata: {
       filePath: resolvePath(merged.metadata.filePath, DEFAULT_CONFIG_FILE),
+      onboarding: {
+        ...DEFAULT_ONBOARDING_STATE,
+        ...(merged.metadata.onboarding ?? {}),
+      },
     },
   };
 };
@@ -359,6 +374,7 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setConfig({ appriseApiUrl, cronExpression, targets }) {
+    const onboardingDefaults = { ...DEFAULT_ONBOARDING_STATE };
     return this.update(async (current) => ({
       ...current,
       notifier: {
@@ -372,6 +388,17 @@ class ConfigStore {
       notifications: {
         ...current.notifications,
         targets: sanitizeTargets(Array.isArray(targets) ? targets : []),
+      },
+      metadata: {
+        ...current.metadata,
+        onboarding: {
+          ...onboardingDefaults,
+          ...(current.metadata?.onboarding ?? {}),
+          appriseConfigured:
+            appriseApiUrl !== undefined
+              ? Boolean(trim(appriseApiUrl) || current.notifier.appriseApiUrl)
+              : Boolean(current.metadata?.onboarding?.appriseConfigured),
+        },
       },
     }));
   }

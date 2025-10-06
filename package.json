@@ -2,7 +2,7 @@
   "name": "balance-bot",
   "private": true,
   "version": "2.0.0",
-  "description": "Balance Bot monitors SimpleFIN accounts and relays rich Apprise notifications.",
+  "description": "balance-bot monitors SimpleFIN accounts and relays rich Apprise notifications.",
   "type": "module",
   "workspaces": [
     "apps/*"

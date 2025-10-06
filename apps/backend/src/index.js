@@ -185,7 +185,7 @@ class BalanceMonitor {
 }
 
 /**
- * Orchestrates configuration, polling, and notifications for Balance Bot.
+ * Orchestrates configuration, polling, and notifications for balance-bot.
  */
 class BalanceBotService {
   constructor({ configStore }) {

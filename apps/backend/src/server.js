@@ -44,6 +44,11 @@ const createApp = async () => {
       polling: {
         cronExpression: config.polling.cronExpression,
       },
+      onboarding: {
+        appriseConfigured: Boolean(
+          config.metadata?.onboarding?.appriseConfigured,
+        ),
+      },
     };
   };
 
@@ -148,7 +153,7 @@ const start = async () => {
   const { app, botService } = await createApp();
   const port = process.env.PORT ? Number(process.env.PORT) : 4000;
   const server = app.listen(port, () => {
-    logger.info('Balance Bot backend listening', { port });
+    logger.info('balance-bot backend listening', { port });
   });
 
   const shutdown = async (signal) => {

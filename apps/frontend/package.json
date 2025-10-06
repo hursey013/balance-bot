@@ -2,7 +2,7 @@
   "name": "@balance-bot/frontend",
   "private": true,
   "version": "1.0.0",
-  "description": "Frontend wizard for Balance Bot, guiding SimpleFIN setup and Apprise routing.",
+  "description": "Frontend wizard for balance-bot, guiding SimpleFIN setup and Apprise routing.",
   "type": "module",
   "scripts": {
     "dev": "vite",

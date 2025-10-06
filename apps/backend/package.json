@@ -1,7 +1,7 @@
 {
   "name": "@balance-bot/backend",
   "version": "1.1.0",
-  "description": "Backend service for Balance Bot, handling SimpleFIN polling and notification orchestration.",
+  "description": "Backend service for balance-bot, handling SimpleFIN polling and notification orchestration.",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Balance Bot</title>
+  <title id="title">balance-bot</title>
   <desc id="desc">Friendly robot whose arms form a balance beam with two coins.</desc>
   <!-- Palette (light theme) -->
   <defs>
