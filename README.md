@@ -76,3 +76,19 @@ services:
 ```
 
 Once the containers settle, visit [http://localhost:4000](http://localhost:4000) (replace `localhost` with your NAS IP if needed). That’s your command center.
+
+## Keep it shipshape
+
+Run our quality checks anytime you tweak the bot:
+
+```bash
+npm run lint
+npm run test
+npm run build
+```
+
+Each command covers every workspace so the backend, frontend, and shared tooling stay in sync.
+
+## License
+
+balance-bot is released under the [MIT License](./LICENSE).

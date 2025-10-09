@@ -297,10 +297,7 @@ class BalanceBotService {
       try {
         await this.stateStore.save();
       } catch (error) {
-        logger.error(
-          { err: error },
-          'Failed to persist state during shutdown',
-        );
+        logger.error({ err: error }, 'Failed to persist state during shutdown');
       }
     }
 
