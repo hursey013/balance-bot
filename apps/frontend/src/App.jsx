@@ -328,21 +328,21 @@ const TargetEditor = ({
 
   return (
     <div
-      className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-black/20"
+      className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg shadow-black/20"
       onClick={handleCardClick}
     >
       <button
         type="button"
-        className="flex w-full items-start justify-between gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition hover:border-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="flex w-full items-start justify-between gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         onClick={() => setCollapsed((value) => !value)}
         aria-expanded={!collapsed}
         aria-controls={detailsId}
       >
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-200">
+          <p className="truncate text-sm font-semibold text-slate-900">
             {headingName}
           </p>
-          <p className="mt-1 text-xs text-slate-500">{summaryText}</p>
+          <p className="mt-1 text-xs text-slate-600">{summaryText}</p>
         </div>
         <IconChevronDown
           className={`mt-1 h-4 w-4 shrink-0 transition-transform ${collapsed ? '' : 'rotate-180'}`}
@@ -353,14 +353,14 @@ const TargetEditor = ({
         <div id={detailsId} className="mt-6 space-y-6">
           <div className="w-full md:w-64">
             <label
-              className="block text-sm font-medium text-slate-300"
+              className="block text-sm font-medium text-slate-700"
               htmlFor={`target-name-${index}`}
             >
               Person or channel name
             </label>
             <input
               id={`target-name-${index}`}
-              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
               placeholder="Elliot's devices"
               value={target.name}
               onChange={(event) =>
@@ -372,7 +372,7 @@ const TargetEditor = ({
           <fieldset className="space-y-3" ref={dropdownRef}>
             <legend
               id={legendId}
-              className="text-sm font-semibold text-slate-200"
+              className="text-sm font-semibold text-slate-900"
             >
               Which accounts should notify this person?
             </legend>
@@ -380,7 +380,7 @@ const TargetEditor = ({
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 outline-none transition hover:border-primary hover:text-primary-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/60"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition hover:border-primary hover:text-primary focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/60"
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-controls={listboxId}
@@ -410,12 +410,12 @@ const TargetEditor = ({
                   {selectedChips.map((chip) => (
                     <span
                       key={chip.id}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-200"
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs text-slate-900"
                     >
                       {chip.label}
                       <button
                         type="button"
-                        className="rounded-full p-0.5 text-slate-400 transition hover:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="rounded-full p-0.5 text-slate-600 transition hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         onClick={() => handleRemoveChip(chip.id)}
                         aria-label={`Remove ${chip.label}`}
                       >
@@ -436,16 +436,16 @@ const TargetEditor = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500">Nothing selected yet.</p>
+                <p className="text-xs text-slate-600">Nothing selected yet.</p>
               )}
             </div>
 
             {open ? (
-              <div className="relative mt-3 rounded-xl border border-slate-800 bg-slate-900/80 shadow-lg shadow-black/40">
-                <div className="border-b border-slate-800 p-3">
+              <div className="relative mt-3 rounded-xl border border-slate-200 bg-slate-50 shadow-lg shadow-black/40">
+                <div className="border-b border-slate-200 p-3">
                   <label
                     htmlFor={searchInputId}
-                    className="block text-xs font-medium uppercase tracking-wide text-slate-400"
+                    className="block text-xs font-medium uppercase tracking-wide text-slate-600"
                   >
                     Search accounts
                   </label>
@@ -453,7 +453,7 @@ const TargetEditor = ({
                     id={searchInputId}
                     ref={searchRef}
                     type="search"
-                    className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                    className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
                     placeholder="Search by name or institution"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
@@ -468,23 +468,23 @@ const TargetEditor = ({
                   aria-labelledby={legendId}
                   className="max-h-64 overflow-y-auto p-3"
                 >
-                  <div className="mb-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-                    <label className="flex items-center justify-between gap-3 text-sm text-slate-200">
+                  <div className="mb-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                    <label className="flex items-center justify-between gap-3 text-sm text-slate-900">
                       <span className="font-medium">All accounts</span>
                       <input
                         type="checkbox"
-                        className="rounded border-slate-600 bg-slate-900 text-primary focus:ring-primary/40"
+                        className="rounded border-slate-300 bg-white text-primary focus:ring-primary/40"
                         checked={selectedSet.has('*')}
                         onChange={() => toggleAccount('*')}
                       />
                     </label>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-slate-600">
                       Selecting this overrides individual account picks.
                     </p>
                   </div>
 
                   {filteredGroups.length === 0 ? (
-                    <p className="px-3 py-8 text-center text-sm text-slate-500">
+                    <p className="px-3 py-8 text-center text-sm text-slate-600">
                       No accounts match &quot;{query}&quot;.
                     </p>
                   ) : null}
@@ -492,7 +492,7 @@ const TargetEditor = ({
                   {filteredGroups.map(
                     ({ label, accounts: groupedAccounts }) => (
                       <div key={label} className="mb-4 last:mb-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                           {label}
                         </p>
                         <div className="mt-2 flex flex-col gap-2">
@@ -505,13 +505,13 @@ const TargetEditor = ({
                               <label
                                 key={account.id}
                                 htmlFor={checkboxId}
-                                className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-primary/60"
+                                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition hover:border-primary/60"
                               >
                                 <span>{accountLabel(account)}</span>
                                 <input
                                   id={checkboxId}
                                   type="checkbox"
-                                  className="rounded border-slate-600 bg-slate-900 text-primary focus:ring-primary/40"
+                                  className="rounded border-slate-300 bg-white text-primary focus:ring-primary/40"
                                   checked={checked}
                                   disabled={
                                     selectedSet.has('*') &&
@@ -528,10 +528,10 @@ const TargetEditor = ({
                   )}
                 </div>
 
-                <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-3 py-2">
+                <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-3 py-2">
                   <button
                     type="button"
-                    className="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:text-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     onClick={() => {
                       setQuery('');
                       closeDropdown();
@@ -544,12 +544,12 @@ const TargetEditor = ({
             ) : null}
           </fieldset>
 
-          <section className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+          <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div>
-              <h3 className="text-base font-semibold text-slate-200">
+              <h3 className="text-base font-semibold text-slate-900">
                 Apprise delivery
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600">
                 Choose a config key or drop direct URLs for this recipient.{' '}
                 <a
                   href="https://github.com/caronc/apprise?tab=readme-ov-file#supported-notifications"
@@ -563,14 +563,14 @@ const TargetEditor = ({
             </div>
             <div className="w-full md:w-64">
               <label
-                className="block text-sm font-medium text-slate-300"
+                className="block text-sm font-medium text-slate-700"
                 htmlFor={`target-config-${index}`}
               >
                 Apprise config key (optional)
               </label>
               <input
                 id={`target-config-${index}`}
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
                 placeholder="team-balance-updates"
                 value={target.appriseConfigKey ?? ''}
                 onChange={(event) =>
@@ -580,7 +580,7 @@ const TargetEditor = ({
             </div>
             <div>
               <label
-                className="block text-sm font-medium text-slate-300"
+                className="block text-sm font-medium text-slate-700"
                 htmlFor={`target-urls-${index}`}
               >
                 Direct Apprise URLs (one per line)
@@ -588,7 +588,7 @@ const TargetEditor = ({
               <textarea
                 id={`target-urls-${index}`}
                 rows={3}
-                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
                 placeholder="discord://webhook-url"
                 value={(target.appriseUrls ?? []).join('\n')}
                 onChange={(event) =>
@@ -604,7 +604,7 @@ const TargetEditor = ({
           <div className="flex justify-end">
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-lg border border-red-500 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/10"
+              className="inline-flex items-center gap-2 rounded-lg border border-red-500 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/10"
               onClick={onRemove}
             >
               <IconTrash className="h-4 w-4" />
@@ -635,7 +635,8 @@ const App = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [accessPreview, setAccessPreview] = useState(null);
-  const isAdminView = currentStep === 3;
+  const [booting, setBooting] = useState(true);
+  const isAdminView = !booting && currentStep === 3;
   const successMessageRef = useRef(null);
   const [collapseVersion, setCollapseVersion] = useState(0);
   const hasTargetChanges = useMemo(
@@ -686,6 +687,9 @@ const App = () => {
         setError(
           "We couldn't load your saved settings. Give it another try in a moment.",
         );
+        setCurrentStep(1);
+      } finally {
+        setBooting(false);
       }
     };
 
@@ -825,7 +829,7 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-12">
         {isAdminView ? (
           <header className="flex flex-col gap-2 text-left">
@@ -860,7 +864,7 @@ const App = () => {
             <h1 className="text-3xl font-bold">
               Let&apos;s get Balance Bot connected
             </h1>
-            <p className="max-w-2xl text-slate-400">
+            <p className="max-w-2xl text-slate-600">
               We&apos;ll gather your SimpleFIN access and Apprise endpoint, then
               hand things over to the notification dashboard.{' '}
               <a
@@ -875,213 +879,224 @@ const App = () => {
           </header>
         )}
 
-        <section
-          className={`flex w-full flex-col gap-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-2xl shadow-black/40 ${
-            isAdminView
-              ? 'md:self-stretch lg:max-w-none'
-              : 'md:self-center md:px-10 lg:max-w-3xl'
-          }`}
-        >
-          <div className="flex flex-col gap-6">
-            {error ? (
-              <div className="rounded-lg border border-red-500 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {error}
-              </div>
-            ) : null}
-            {message ? (
-              <div
-                ref={successMessageRef}
-                tabIndex={-1}
-                className="rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 focus:outline-none"
-              >
-                {message}
-              </div>
-            ) : null}
-
-            {currentStep === 1 ? (
-              <form className="flex flex-col gap-4" onSubmit={handleExchange}>
-                <div>
-                  <h2 className="text-xl font-semibold">Connect SimpleFIN</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Generate a setup token or access link from your{' '}
-                    <a
-                      href="https://beta-bridge.simplefin.org/"
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="text-primary underline-offset-2 hover:underline"
-                    >
-                      SimpleFIN account
-                    </a>{' '}
-                    so Balance Bot can read balances securely.
-                  </p>
+        {booting ? (
+          <section className="flex w-full flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-2xl shadow-black/10 md:self-center md:px-10 lg:max-w-3xl">
+            <h2 className="text-lg font-semibold">Loading configuration…</h2>
+            <p className="text-sm text-slate-600">
+              Give us a moment while we load your saved Balance Bot settings.
+            </p>
+          </section>
+        ) : (
+          <section
+            className={`flex w-full flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-black/40 ${
+              isAdminView
+                ? 'md:self-stretch lg:max-w-none'
+                : 'md:self-center md:px-10 lg:max-w-3xl'
+            }`}
+          >
+            <div className="flex flex-col gap-6">
+              {error ? (
+                <div className="rounded-lg border border-red-500 bg-red-500/10 px-4 py-3 text-sm text-red-700">
+                  {error}
                 </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium text-slate-300"
-                    htmlFor="setup-token"
-                  >
-                    SimpleFIN setup token
-                  </label>
-                  <textarea
-                    id="setup-token"
-                    rows={3}
-                    className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
-                    placeholder="Paste the long base64 token from SimpleFIN"
-                    value={setupToken}
-                    onChange={(event) => setSetupToken(event.target.value)}
-                  />
-                </div>
-
-                <div className="text-center text-sm font-semibold text-slate-400">
-                  or
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-medium text-slate-300"
-                    htmlFor="access-url"
-                  >
-                    Existing access URL
-                  </label>
-                  <input
-                    id="access-url"
-                    className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
-                    placeholder="https://user:pass@bridge.simplefin.org/simplefin"
-                    value={accessUrl}
-                    onChange={(event) => setAccessUrl(event.target.value)}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={loading}
+              ) : null}
+              {message ? (
+                <div
+                  ref={successMessageRef}
+                  tabIndex={-1}
+                  className="rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 focus:outline-none"
                 >
-                  {loading ? 'Checking…' : "Let's keep going"}
-                </button>
-
-                {accessPreview ? (
-                  <p className="text-sm text-slate-400">
-                    Stored access link:{' '}
-                    <span className="font-mono">{accessPreview}</span>
-                  </p>
-                ) : null}
-              </form>
-            ) : null}
-
-            {currentStep === 2 ? (
-              <form
-                className="flex flex-col gap-4"
-                onSubmit={handleAppriseSave}
-              >
-                <div>
-                  <h2 className="text-xl font-semibold">Connect Apprise</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Point Balance Bot at your{' '}
-                    <a
-                      href="https://github.com/caronc/apprise"
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="text-primary underline-offset-2 hover:underline"
-                    >
-                      Apprise notification server
-                    </a>{' '}
-                    so alerts reach the right places.
-                  </p>
+                  {message}
                 </div>
-                <div>
-                  <label
-                    className="block text-sm font-medium text-slate-300"
-                    htmlFor="apprise-url"
-                  >
-                    Apprise API endpoint
-                  </label>
-                  <input
-                    id="apprise-url"
-                    className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
-                    value={appriseApiUrl}
-                    onChange={(event) => setAppriseApiUrl(event.target.value)}
-                  />
-                  <p className="mt-2 text-xs text-slate-500">
-                    Point us at your Apprise server so we can move on to the
-                    notification dashboard.
-                  </p>
-                </div>
+              ) : null}
 
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={loading || !(appriseApiUrl || '').trim()}
-                >
-                  {loading ? 'Saving…' : 'Save and continue'}
-                </button>
-              </form>
-            ) : null}
-
-            {currentStep === 3 ? (
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              {currentStep === 1 ? (
+                <form className="flex flex-col gap-4" onSubmit={handleExchange}>
                   <div>
-                    <h2 className="text-lg font-semibold">
-                      Notification recipients
-                    </h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Alerts flow through Apprise at{' '}
-                      <span className="font-mono">{appriseApiUrl}</span>.
+                    <h2 className="text-xl font-semibold">Connect SimpleFIN</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Generate a setup token or access link from your{' '}
+                      <a
+                        href="https://beta-bridge.simplefin.org/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        SimpleFIN account
+                      </a>{' '}
+                      so Balance Bot can read balances securely.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/10"
-                    onClick={addTarget}
-                  >
-                    <IconPlus className="h-4 w-4" />
-                    <span>Add recipient</span>
-                  </button>
-                </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium text-slate-700"
+                      htmlFor="setup-token"
+                    >
+                      SimpleFIN setup token
+                    </label>
+                    <textarea
+                      id="setup-token"
+                      rows={3}
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                      placeholder="Paste the long base64 token from SimpleFIN"
+                      value={setupToken}
+                      onChange={(event) => setSetupToken(event.target.value)}
+                    />
+                  </div>
 
-                <div className="flex flex-col gap-4">
-                  {targets.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-slate-700 bg-slate-900/80 px-4 py-6 text-sm text-slate-400">
-                      Add at least one person or channel so Balance Bot knows
-                      who to nudge when something changes.
+                  <div className="text-center text-sm font-semibold text-slate-600">
+                    or
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-medium text-slate-700"
+                      htmlFor="access-url"
+                    >
+                      Existing access URL
+                    </label>
+                    <input
+                      id="access-url"
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                      placeholder="https://user:pass@bridge.simplefin.org/simplefin"
+                      value={accessUrl}
+                      onChange={(event) => setAccessUrl(event.target.value)}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={loading}
+                  >
+                    {loading ? 'Checking…' : "Let's keep going"}
+                  </button>
+
+                  {accessPreview ? (
+                    <p className="text-sm text-slate-600">
+                      Stored access link:{' '}
+                      <span className="font-mono">{accessPreview}</span>
                     </p>
                   ) : null}
-                  {targets.map((target, index) => (
-                    <TargetEditor
-                      key={`target-${index}`}
-                      target={target}
-                      index={index}
-                      accounts={accounts}
-                      onChange={(nextTarget) => updateTarget(index, nextTarget)}
-                      onRemove={() => removeTarget(index)}
-                      collapseVersion={collapseVersion}
-                    />
-                  ))}
-                </div>
+                </form>
+              ) : null}
 
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  {hasTargetChanges || loading ? (
+              {currentStep === 2 ? (
+                <form
+                  className="flex flex-col gap-4"
+                  onSubmit={handleAppriseSave}
+                >
+                  <div>
+                    <h2 className="text-xl font-semibold">Connect Apprise</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Point Balance Bot at your{' '}
+                      <a
+                        href="https://github.com/caronc/apprise"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        Apprise notification server
+                      </a>{' '}
+                      so alerts reach the right places.
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium text-slate-700"
+                      htmlFor="apprise-url"
+                    >
+                      Apprise API endpoint
+                    </label>
+                    <input
+                      id="apprise-url"
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                      value={appriseApiUrl}
+                      onChange={(event) => setAppriseApiUrl(event.target.value)}
+                    />
+                    <p className="mt-2 text-xs text-slate-600">
+                      Point us at your Apprise server so we can move on to the
+                      notification dashboard.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={loading || !(appriseApiUrl || '').trim()}
+                  >
+                    {loading ? 'Saving…' : 'Save and continue'}
+                  </button>
+                </form>
+              ) : null}
+
+              {currentStep === 3 ? (
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold">
+                        Notification recipients
+                      </h2>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Alerts flow through Apprise at{' '}
+                        <span className="font-mono">{appriseApiUrl}</span>.
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={handleTargetsSave}
-                      disabled={loading || accounts.length === 0}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                      onClick={addTarget}
                     >
-                      {loading ? 'Saving…' : 'Save recipients'}
+                      <IconPlus className="h-4 w-4" />
+                      <span>Add recipient</span>
                     </button>
-                  ) : null}
-                  {accounts.length === 0 ? (
-                    <p className="text-sm text-amber-300">
-                      We&apos;ll unlock saving once SimpleFIN shares your
-                      accounts.
-                    </p>
-                  ) : null}
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    {targets.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                        Add at least one person or channel so Balance Bot knows
+                        who to nudge when something changes.
+                      </p>
+                    ) : null}
+                    {targets.map((target, index) => (
+                      <TargetEditor
+                        key={`target-${index}`}
+                        target={target}
+                        index={index}
+                        accounts={accounts}
+                        onChange={(nextTarget) =>
+                          updateTarget(index, nextTarget)
+                        }
+                        onRemove={() => removeTarget(index)}
+                        collapseVersion={collapseVersion}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    {hasTargetChanges || loading ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={handleTargetsSave}
+                        disabled={loading || accounts.length === 0}
+                      >
+                        {loading ? 'Saving…' : 'Save recipients'}
+                      </button>
+                    ) : null}
+                    {accounts.length === 0 ? (
+                      <p className="text-sm text-amber-600">
+                        We&apos;ll unlock saving once SimpleFIN shares your
+                        accounts.
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
+              ) : null}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

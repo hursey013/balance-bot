@@ -83,7 +83,6 @@ const DEFAULT_APPRISE_URL = 'http://apprise:8000/notify';
 const DEFAULT_CRON = '0 * * * *';
 const DEFAULT_ONBOARDING_STATE = {
   appriseConfigured: false,
-  completed: false,
 };
 
 /**
