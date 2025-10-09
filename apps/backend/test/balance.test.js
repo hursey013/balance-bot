@@ -47,11 +47,19 @@ test('balance monitor notifies when balances change', async () => {
   };
 
   const logEntries = [];
+  const captureLog =
+    (level) =>
+    (first, second) => {
+      if (typeof first === 'string') {
+        logEntries.push({ level, message: first, meta: second });
+      } else {
+        logEntries.push({ level, message: second, meta: first });
+      }
+    };
   const logger = {
-    info: (message, meta) => logEntries.push({ level: 'info', message, meta }),
-    warn: (message, meta) => logEntries.push({ level: 'warn', message, meta }),
-    error: (message, meta) =>
-      logEntries.push({ level: 'error', message, meta }),
+    info: captureLog('info'),
+    warn: captureLog('warn'),
+    error: captureLog('error'),
   };
 
   const monitor = new BalanceMonitor({

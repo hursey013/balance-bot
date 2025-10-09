@@ -905,7 +905,7 @@ const App = () => {
                   <p className="mt-1 text-sm text-slate-400">
                     Generate a setup token or access link from your{' '}
                     <a
-                      href="https://www.simplefin.org/"
+                      href="https://beta-bridge.simplefin.org/"
                       target="_blank"
                       rel="noreferrer noopener"
                       className="text-primary underline-offset-2 hover:underline"

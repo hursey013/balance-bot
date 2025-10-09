@@ -134,11 +134,10 @@ const createApp = async () => {
   });
 
   app.use((error, req, res) => {
-    logger.error('API request failed', {
-      path: req.path,
-      method: req.method,
-      error: error.message,
-    });
+    logger.error(
+      { path: req.path, method: req.method, err: error },
+      'API request failed',
+    );
     res.status(500).json({ error: error.message });
   });
 
@@ -153,11 +152,11 @@ const start = async () => {
   const { app, botService } = await createApp();
   const port = process.env.PORT ? Number(process.env.PORT) : 4000;
   const server = app.listen(port, () => {
-    logger.info('balance-bot backend listening', { port });
+    logger.info({ port }, 'balance-bot backend listening');
   });
 
   const shutdown = async (signal) => {
-    logger.info('Received shutdown signal', { signal });
+    logger.info({ signal }, 'Received shutdown signal');
     server.close(async () => {
       await botService.stop();
       process.exit(0);
@@ -169,6 +168,6 @@ const start = async () => {
 };
 
 start().catch((error) => {
-  logger.error('Failed to start backend server', { error: error.message });
+  logger.error({ err: error }, 'Failed to start backend server');
   process.exit(1);
 });

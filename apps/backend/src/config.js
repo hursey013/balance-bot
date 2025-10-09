@@ -274,7 +274,7 @@ class ConfigStore {
       payload.notifications.targets,
     );
     await atomicWriteJson(this.filePath, payload);
-    logger.info('Persisted configuration', { filePath: this.filePath });
+    logger.info({ filePath: this.filePath }, 'Persisted configuration');
   }
 
   /**

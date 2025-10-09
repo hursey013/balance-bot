@@ -76,10 +76,10 @@ class BalanceMonitor {
         try {
           await this.#processAccount(account);
         } catch (error) {
-          this.log.error('Failed to process account', {
-            accountId: account?.id,
-            error: error.message,
-          });
+          this.log.error(
+            { accountId: account?.id, err: error },
+            'Failed to process account',
+          );
         }
       }
 
@@ -113,9 +113,10 @@ class BalanceMonitor {
 
     const balanceInfo = resolveBalanceInfo(account);
     if (!balanceInfo) {
-      this.log.warn('Could not resolve account balance', {
-        accountId: account.id,
-      });
+      this.log.warn(
+        { accountId: account.id },
+        'Could not resolve account balance',
+      );
       return;
     }
 
@@ -124,11 +125,14 @@ class BalanceMonitor {
 
     if (previousBalance === null) {
       await this.stateStore.setLastBalance(account.id, currentBalance);
-      this.log.info('Stored baseline balance', {
-        accountId: account.id,
-        accountName: account.name || account.id,
-        balance: currentBalance,
-      });
+      this.log.info(
+        {
+          accountId: account.id,
+          accountName: account.name || account.id,
+          balance: currentBalance,
+        },
+        'Stored baseline balance',
+      );
       return;
     }
 
@@ -161,13 +165,16 @@ class BalanceMonitor {
         configKey: target.appriseConfigKey,
       });
 
-      this.log.info('Sent balance update', {
-        accountId: account.id,
-        accountName,
-        delta,
-        newBalance: currentBalance,
-        target: target.name || 'unnamed',
-      });
+      this.log.info(
+        {
+          accountId: account.id,
+          accountName,
+          delta,
+          newBalance: currentBalance,
+          target: target.name || 'unnamed',
+        },
+        'Sent balance update',
+      );
     }
 
     await this.stateStore.setLastBalance(account.id, currentBalance);
@@ -250,14 +257,14 @@ class BalanceBotService {
       throw new Error(`Invalid cron expression: ${schedule}`);
     }
 
-    logger.info('Starting balance monitor', {
-      schedule,
-      ...this.balanceMonitor.summary,
-    });
+    logger.info(
+      { schedule, ...this.balanceMonitor.summary },
+      'Starting balance monitor',
+    );
 
     const queueCheck = () =>
       this.balanceMonitor.runOnce().catch((error) => {
-        logger.error('Balance check failed', { error: error.message });
+        logger.error({ err: error }, 'Balance check failed');
       });
 
     this.task = cron.schedule(schedule, queueCheck, { scheduled: false });
@@ -290,9 +297,10 @@ class BalanceBotService {
       try {
         await this.stateStore.save();
       } catch (error) {
-        logger.error('Failed to persist state during shutdown', {
-          error: error.message,
-        });
+        logger.error(
+          { err: error },
+          'Failed to persist state during shutdown',
+        );
       }
     }
 
