@@ -20,5 +20,6 @@
   },
   "devDependencies": {
     "nock": "^14.0.10"
-  }
+  },
+  "license": "MIT"
 }
