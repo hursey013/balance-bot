@@ -16,38 +16,32 @@
   <a href="https://ghcr.io/hursey013/balance-bot"><img alt="Image" src="https://img.shields.io/badge/ghcr-image-blue"></a>
 </p>
 
-## Welcome to Your Household Helper
+## Say hello to balance-bot
 
-Balance-bot keeps a watch on your [SimpleFIN](https://beta-bridge.simplefin.org) accounts and sends bright, timely notes through [Apprise](https://github.com/caronc/apprise). Parents and kids stay in the loop—no spreadsheets, no stress, just quick reminders when something changes.
+Balance-bot keeps a watch on your [SimpleFIN](https://beta-bridge.simplefin.org) accounts and sends timely notes through [Apprise](https://github.com/caronc/apprise). Parents and kids stay in the loop—no spreadsheets, no stress, just quick reminders when something changes.
 
 ### Why families love it
 
-- **Everyone hears the news.** Drop in Discord, Matrix, email, or any Apprise-ready place and we’ll whisper updates right where your family hangs out.
-- **It’s cheerful, not stuffy.** We use warm wording and emojis so every alert feels like a helpful nudge, not a bank statement.
+- **Everyone hears the news.** Drop in Discord, Matrix, email, or any Apprise-ready place and we’ll send updates right where your family hangs out.
 - **You stay in charge.** Pick which accounts matter to each person, then relax while balance-bot keeps watch.
 
 ### Peek at the alerts
 
-Here’s an example Discord message you might see:
+Here’s an example message you might see:
 
 ```
 🏦 Balance update for Jamie
-Kids Savings • $54.22 → $79.22
-
-Allowance landed right on schedule. High five! 🎉
+📉 -$15.00
+💰 $79.22
 ```
-
-Every notification includes the account name, the new balance, and a short, upbeat summary.
 
 ## Gather Your Ingredients
 
 - A SimpleFIN setup token or an existing access link. Copy the whole thing so we can trade it for a long-lived key.
 - Somewhere for Apprise to deliver the news—Discord channel, Matrix room, email, you name it.
-- Docker (Portainer, Synology Container Manager, or vanilla `docker`) **or** Node.js 20+ if you prefer running it directly.
+- Docker **or** Node.js 20+ if you prefer running it directly.
 
 ## Quick Start
-
-This snippet plays nicely with Docker Compose, Portainer stacks, and Synology’s container wizard. Paste it in and launch:
 
 ```yaml
 version: '3.8'
