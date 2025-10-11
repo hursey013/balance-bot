@@ -30,14 +30,19 @@
   <rect x="76" y="144" width="4" height="22" rx="2" fill="#111827"/>
   <rect x="176" y="144" width="4" height="22" rx="2" fill="#111827"/>
 
-  <!-- Pans -->
+  <!-- Money stack base -->
+  <g stroke="#111827" stroke-width="4" stroke-linejoin="round">
+    <rect x="96" y="196" width="64" height="18" rx="6" fill="#15803D"/>
+    <rect x="92" y="188" width="68" height="18" rx="6" fill="#16A34A"/>
+    <rect x="88" y="180" width="72" height="18" rx="6" fill="#22C55E"/>
+    <rect x="114" y="184" width="20" height="28" rx="4" fill="#0EA5E9"/>
+  </g>
+
+  <!-- Feet pans -->
   <path d="M60 172h40c0 11-9 20-20 20s-20-9-20-20Z" fill="#FFFFFF" stroke="#111827" stroke-width="6"/>
   <path d="M156 172h40c0 11-9 20-20 20s-20-9-20-20Z" fill="#FFFFFF" stroke="#111827" stroke-width="6"/>
 
-  <!-- Coins -->
+  <!-- Golden toes -->
   <circle cx="80" cy="174" r="8" fill="#F59E0B"/>
   <circle cx="176" cy="178" r="8" fill="#F59E0B"/>
-
-  <!-- Body plate -->
-  <rect x="98" y="188" width="60" height="20" rx="6" fill="#0EA5E9"/>
 </svg>
