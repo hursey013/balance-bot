@@ -47,4 +47,4 @@ This message reaffirms consent, disclosures, and opt-out instructions.
 
 ## Change Log
 
-- **2024-11-27**: Initial publication for Twilio Toll-Free Verification
+- **2025-10-11**: Initial publication for Twilio Toll-Free Verification
