@@ -63,7 +63,6 @@ class BalanceMonitor {
     }
 
     this.running = true;
-    this.log.info('Balance check started');
 
     try {
       const accounts = await this.#fetchAccounts();
@@ -85,7 +84,6 @@ class BalanceMonitor {
 
       return true;
     } finally {
-      this.log.info('Balance check finished');
       this.running = false;
     }
   }
