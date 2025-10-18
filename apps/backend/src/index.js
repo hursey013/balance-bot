@@ -3,6 +3,7 @@ import logger from './logger.js';
 import createSimplefinClient from './simplefin.js';
 import createNotifier from './notifier.js';
 import createStore from './store.js';
+import createHealthchecksClient from './healthchecks.js';
 import { resolveBalanceInfo, formatCurrency, uniqueEntries } from './utils.js';
 import { createConfig, ConfigStore } from './config.js';
 
@@ -10,10 +11,18 @@ import { createConfig, ConfigStore } from './config.js';
  * Coordinates SimpleFIN balances, persistence, and notifications for one run.
  */
 class BalanceMonitor {
-  constructor({ simplefinClient, notifier, stateStore, config, log = logger }) {
+  constructor({
+    simplefinClient,
+    notifier,
+    stateStore,
+    config,
+    healthchecks = null,
+    log = logger,
+  }) {
     this.simplefinClient = simplefinClient;
     this.notifier = notifier;
     this.stateStore = stateStore;
+    this.healthchecks = healthchecks;
     this.log = log;
 
     const targets = Array.isArray(config.notifications?.targets)
@@ -63,28 +72,96 @@ class BalanceMonitor {
     }
 
     this.running = true;
+    const startedAt = Date.now();
+    let accountsFetched = 0;
+    let notifiedAccounts = 0;
+    let notificationsSent = 0;
+    let failedAccounts = 0;
+    let runSuccess = false;
+    let runResult = false;
+    let failureError = null;
 
     try {
+      if (
+        this.healthchecks &&
+        typeof this.healthchecks.notifyStart === 'function'
+      ) {
+        await this.healthchecks.notifyStart();
+      }
+
       const accounts = await this.#fetchAccounts();
+      if (Array.isArray(accounts)) {
+        accountsFetched = accounts.length;
+      }
       if (!Array.isArray(accounts) || !accounts.length) {
         this.log.warn('SimpleFIN returned no accounts');
+        runSuccess = true;
+        runResult = false;
         return false;
       }
 
       for (const account of accounts) {
         try {
-          await this.#processAccount(account);
+          const result = await this.#processAccount(account);
+          if (result?.notificationsSent > 0) {
+            notificationsSent += result.notificationsSent;
+            notifiedAccounts += 1;
+          }
         } catch (error) {
           this.log.error(
             { accountId: account?.id, err: error },
             'Failed to process account',
           );
+          failedAccounts += 1;
         }
       }
 
+      runSuccess = true;
+      runResult = notificationsSent > 0;
       return true;
+    } catch (error) {
+      failureError = error;
+      throw error;
     } finally {
       this.running = false;
+
+      const elapsedMs = Date.now() - startedAt;
+      const payload = {
+        elapsedMs,
+        timestamp: new Date().toISOString(),
+        accountsFetched,
+        notifiedAccounts,
+        notificationsSent,
+        failedAccounts,
+      };
+
+      if (failureError) {
+        const errorMessage =
+          failureError instanceof Error
+            ? failureError.message
+            : typeof failureError === 'string'
+              ? failureError
+              : 'Unknown error';
+        if (
+          this.healthchecks &&
+          typeof this.healthchecks.notifyFailure === 'function'
+        ) {
+          await this.healthchecks.notifyFailure({
+            ...payload,
+            error: errorMessage,
+          });
+        }
+      } else if (runSuccess) {
+        if (
+          this.healthchecks &&
+          typeof this.healthchecks.notifySuccess === 'function'
+        ) {
+          await this.healthchecks.notifySuccess({
+            ...payload,
+            hasNotifications: runResult,
+          });
+        }
+      }
     }
   }
 
@@ -99,14 +176,15 @@ class BalanceMonitor {
 
   /** @private */
   async #processAccount(account) {
+    let notificationsSent = 0;
     if (!account?.id) {
       this.log.warn('Skipping account without id');
-      return;
+      return { notificationsSent };
     }
 
     const targets = this.#selectTargets(account.id);
     if (!targets.length) {
-      return;
+      return { notificationsSent };
     }
 
     const balanceInfo = resolveBalanceInfo(account);
@@ -115,7 +193,7 @@ class BalanceMonitor {
         { accountId: account.id },
         'Could not resolve account balance',
       );
-      return;
+      return { notificationsSent };
     }
 
     const { amount: currentBalance, currency } = balanceInfo;
@@ -131,7 +209,7 @@ class BalanceMonitor {
         },
         'Stored baseline balance',
       );
-      return;
+      return { notificationsSent };
     }
 
     const delta = currentBalance - previousBalance;
@@ -139,7 +217,7 @@ class BalanceMonitor {
       if (previousBalance !== currentBalance) {
         await this.stateStore.setLastBalance(account.id, currentBalance);
       }
-      return;
+      return { notificationsSent };
     }
 
     const accountName = account.name || account.nickname || account.id;
@@ -162,6 +240,7 @@ class BalanceMonitor {
         urls: target.appriseUrls,
         configKey: target.appriseConfigKey,
       });
+      notificationsSent += 1;
 
       this.log.info(
         {
@@ -176,6 +255,7 @@ class BalanceMonitor {
     }
 
     await this.stateStore.setLastBalance(account.id, currentBalance);
+    return { notificationsSent };
   }
 
   /** @private */
@@ -200,6 +280,7 @@ class BalanceBotService {
     this.stateStore = null;
     this.balanceMonitor = null;
     this.task = null;
+    this.healthchecks = null;
   }
 
   /**
@@ -235,12 +316,14 @@ class BalanceBotService {
     });
 
     this.notifier = createNotifier(config.notifier);
+    this.healthchecks = createHealthchecksClient(config.healthchecks);
     this.stateStore = createStore(config.storage.stateFilePath);
     this.balanceMonitor = new BalanceMonitor({
       simplefinClient: this.simplefinClient,
       notifier: this.notifier,
       stateStore: this.stateStore,
       config,
+      healthchecks: this.healthchecks,
       log: logger,
     });
 
@@ -303,6 +386,7 @@ class BalanceBotService {
     this.notifier = null;
     this.stateStore = null;
     this.balanceMonitor = null;
+    this.healthchecks = null;
   }
 
   /**

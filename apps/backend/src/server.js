@@ -38,6 +38,10 @@ const createApp = async () => {
       notifier: {
         appriseApiUrl: config.notifier.appriseApiUrl,
       },
+      healthchecks: {
+        pingUrl: config.healthchecks?.pingUrl ?? '',
+        configured: Boolean(config.healthchecks?.pingUrl),
+      },
       notifications: {
         targets: config.notifications.targets,
       },
@@ -106,8 +110,14 @@ const createApp = async () => {
 
   app.put('/api/config', async (req, res, next) => {
     try {
-      const { appriseApiUrl, cronExpression, targets } = req.body ?? {};
-      await configStore.setConfig({ appriseApiUrl, cronExpression, targets });
+      const { appriseApiUrl, cronExpression, targets, healthchecksPingUrl } =
+        req.body ?? {};
+      await configStore.setConfig({
+        appriseApiUrl,
+        cronExpression,
+        targets,
+        healthchecksPingUrl,
+      });
       await botService.reload();
       res.json(await formatConfigResponse());
     } catch (error) {

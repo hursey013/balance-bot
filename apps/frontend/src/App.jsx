@@ -630,18 +630,31 @@ const App = () => {
   );
   const [targets, setTargets] = useState([]);
   const [lastSavedTargets, setLastSavedTargets] = useState([]);
+  const [healthchecksPingUrl, setHealthchecksPingUrl] = useState('');
+  const [lastSavedHealthchecksPingUrl, setLastSavedHealthchecksPingUrl] =
+    useState('');
   const [setupToken, setSetupToken] = useState('');
   const [accessUrl, setAccessUrl] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [accessPreview, setAccessPreview] = useState(null);
   const [booting, setBooting] = useState(true);
+  const healthchecksConfigured = Boolean(
+    (healthchecksPingUrl ?? '').trim(),
+  );
   const isAdminView = !booting && currentStep === 3;
   const successMessageRef = useRef(null);
   const [collapseVersion, setCollapseVersion] = useState(0);
-  const hasTargetChanges = useMemo(
-    () => JSON.stringify(targets) !== JSON.stringify(lastSavedTargets),
-    [targets, lastSavedTargets],
+  const hasConfigChanges = useMemo(
+    () =>
+      JSON.stringify(targets) !== JSON.stringify(lastSavedTargets) ||
+      (healthchecksPingUrl ?? '') !== (lastSavedHealthchecksPingUrl ?? ''),
+    [
+      targets,
+      lastSavedTargets,
+      healthchecksPingUrl,
+      lastSavedHealthchecksPingUrl,
+    ],
   );
 
   useEffect(() => {
@@ -663,6 +676,9 @@ const App = () => {
         const bootTargets = data.notifications.targets ?? [];
         setTargets(bootTargets);
         setLastSavedTargets(bootTargets);
+        const bootHealthchecks = data.healthchecks?.pingUrl ?? '';
+        setHealthchecksPingUrl(bootHealthchecks);
+        setLastSavedHealthchecksPingUrl(bootHealthchecks);
 
         const simplefinConfigured = Boolean(data.simplefin.configured);
         const appriseComplete = Boolean(data.onboarding?.appriseConfigured);
@@ -751,6 +767,7 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           appriseApiUrl,
+          healthchecksPingUrl,
           targets,
         }),
       });
@@ -765,6 +782,9 @@ const App = () => {
       setTargets(savedTargets);
       setLastSavedTargets(savedTargets);
       setAppriseApiUrl(data.notifier.appriseApiUrl);
+      const savedPingUrl = data.healthchecks?.pingUrl ?? '';
+      setHealthchecksPingUrl(savedPingUrl);
+      setLastSavedHealthchecksPingUrl(savedPingUrl);
       setMessage('Apprise is ready to relay your updates.');
       setCurrentStep(3);
     } catch (saveError) {
@@ -802,6 +822,9 @@ const App = () => {
       setTargets(savedTargets);
       setLastSavedTargets(savedTargets);
       setAppriseApiUrl(data.notifier.appriseApiUrl);
+      const savedPingUrl = data.healthchecks?.pingUrl ?? '';
+      setHealthchecksPingUrl(savedPingUrl);
+      setLastSavedHealthchecksPingUrl(savedPingUrl);
       setMessage('All set! Your crew will get updates as balances change.');
       setCollapseVersion((value) => value + 1);
     } catch (saveError) {
@@ -1032,6 +1055,48 @@ const App = () => {
 
               {currentStep === 3 ? (
                 <div className="flex flex-col gap-6">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      Healthchecks monitor <span className="text-xs">(optional)</span>
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Keep tabs on balance-bot from{' '}
+                      <a
+                        href="https://healthchecks.io"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        healthchecks.io
+                      </a>{' '}
+                      or a compatible service by pasting the unique ping URL
+                      below. We&apos;ll send <code className="font-mono">/start</code>, <code className="font-mono">/fail</code>, and
+                      JSON payloads after every run.
+                    </p>
+                    <input
+                      id="healthchecks-ping-url"
+                      className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
+                      placeholder="https://hc-ping.com/your-uuid"
+                      value={healthchecksPingUrl}
+                      onChange={(event) =>
+                        setHealthchecksPingUrl(event.target.value)
+                      }
+                    />
+                    <p className="mt-2 text-xs text-slate-600">
+                      {healthchecksConfigured ? (
+                        <>
+                          We&apos;ll ping{' '}
+                          <span className="font-mono">
+                            {healthchecksPingUrl}
+                          </span>{' '}
+                          as runs begin and finish.
+                        </>
+                      ) : (
+                        'Leave this blank if you do not need uptime tracking.'
+                      )}
+                    </p>
+                  </div>
+
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <h2 className="text-lg font-semibold">
@@ -1075,20 +1140,20 @@ const App = () => {
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    {hasTargetChanges || loading ? (
+                    {hasConfigChanges || loading ? (
                       <button
                         type="button"
                         className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={handleTargetsSave}
-                        disabled={loading || accounts.length === 0}
+                        disabled={loading}
                       >
-                        {loading ? 'Saving…' : 'Save recipients'}
+                        {loading ? 'Saving…' : 'Save settings'}
                       </button>
                     ) : null}
                     {accounts.length === 0 ? (
                       <p className="text-sm text-amber-600">
-                        We&apos;ll unlock saving once SimpleFIN shares your
-                        accounts.
+                        We&apos;ll pull in your accounts as soon as SimpleFIN
+                        shares them. Recipient filters unlock once they appear.
                       </p>
                     ) : null}
                   </div>

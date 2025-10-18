@@ -80,6 +80,8 @@ const DEFAULT_STATE_FILE = path.join(DEFAULT_DATA_DIR, 'state.json');
 const DEFAULT_CACHE_FILE = path.join(DEFAULT_DATA_DIR, 'cache.json');
 const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, 'config.json');
 const DEFAULT_APPRISE_URL = 'http://apprise:8000/notify';
+const DEFAULT_HEALTHCHECKS_PING_URL =
+  trim(process.env.HEALTHCHECKS_PING_URL) || '';
 const DEFAULT_CRON = '0 * * * *';
 const DEFAULT_ONBOARDING_STATE = {
   appriseConfigured: false,
@@ -113,6 +115,9 @@ const defaultConfigTemplate = ({ filePath }) => ({
   },
   notifier: {
     appriseApiUrl: DEFAULT_APPRISE_URL,
+  },
+  healthchecks: {
+    pingUrl: DEFAULT_HEALTHCHECKS_PING_URL,
   },
   notifications: {
     targets: [],
@@ -149,6 +154,10 @@ const applyDefaults = (persisted = {}, { filePath }) => {
     notifier: {
       ...defaults.notifier,
       ...(persisted.notifier ?? {}),
+    },
+    healthchecks: {
+      ...defaults.healthchecks,
+      ...(persisted.healthchecks ?? {}),
     },
     notifications: {
       ...defaults.notifications,
@@ -197,6 +206,9 @@ export const createConfig = ({ persisted = {} } = {}) => {
     },
     notifier: {
       appriseApiUrl: trim(merged.notifier.appriseApiUrl) || DEFAULT_APPRISE_URL,
+    },
+    healthchecks: {
+      pingUrl: trim(merged.healthchecks?.pingUrl),
     },
     notifications: {
       targets: merged.notifications.targets,
@@ -372,7 +384,12 @@ class ConfigStore {
    * @param {{ appriseApiUrl?: string, cronExpression?: string, targets?: Array<Record<string, any>> }} params
    * @returns {Promise<Record<string, any>>}
    */
-  async setConfig({ appriseApiUrl, cronExpression, targets }) {
+  async setConfig({
+    appriseApiUrl,
+    cronExpression,
+    targets,
+    healthchecksPingUrl,
+  }) {
     const onboardingDefaults = { ...DEFAULT_ONBOARDING_STATE };
     return this.update(async (current) => ({
       ...current,
@@ -387,6 +404,13 @@ class ConfigStore {
       notifications: {
         ...current.notifications,
         targets: sanitizeTargets(Array.isArray(targets) ? targets : []),
+      },
+      healthchecks: {
+        ...current.healthchecks,
+        pingUrl:
+          healthchecksPingUrl !== undefined
+            ? trim(healthchecksPingUrl)
+            : current.healthchecks?.pingUrl ?? '',
       },
       metadata: {
         ...current.metadata,

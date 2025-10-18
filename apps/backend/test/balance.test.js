@@ -154,3 +154,115 @@ test('balance monitor fetches all accounts when wildcard target is present', asy
   assert.equal(fetchArgs[0], undefined);
   assert.equal(sent, true);
 });
+
+test('balance monitor emits healthcheck notifications on success', async () => {
+  const simplefinClient = {
+    fetchAccounts: async () => [
+      {
+        id: 'acct-1',
+        name: 'Primary',
+        balance: '150.00',
+        currency: 'USD',
+      },
+    ],
+  };
+
+  const notifierCalls = [];
+  const notifier = {
+    sendNotification: async (payload) => {
+      notifierCalls.push(payload);
+    },
+  };
+
+  let lastStoredBalance = 100;
+  const stateStore = {
+    getLastBalance: async () => lastStoredBalance,
+    setLastBalance: async (_id, value) => {
+      lastStoredBalance = value;
+    },
+    save: async () => {},
+  };
+
+  const starts = [];
+  const successes = [];
+  const failures = [];
+  const healthchecks = {
+    notifyStart: async () => {
+      starts.push(new Date());
+    },
+    notifySuccess: async (payload) => {
+      successes.push(payload);
+    },
+    notifyFailure: async (payload) => {
+      failures.push(payload);
+    },
+  };
+
+  const monitor = new BalanceMonitor({
+    simplefinClient,
+    notifier,
+    stateStore,
+    config: {
+      notifications: {
+        targets: [
+          {
+            name: 'Family',
+            accountIds: ['acct-1'],
+            appriseUrls: ['pover://token@user'],
+          },
+        ],
+      },
+    },
+    healthchecks,
+  });
+
+  await monitor.runOnce();
+
+  assert.equal(starts.length, 1);
+  assert.equal(successes.length, 1);
+  assert.deepEqual(failures, []);
+  assert.equal(notifierCalls.length, 1);
+  assert.equal(successes[0].notificationsSent, 1);
+  assert.equal(successes[0].hasNotifications, true);
+});
+
+test('balance monitor reports healthcheck failure when run throws', async () => {
+  const simplefinClient = {
+    fetchAccounts: async () => {
+      throw new Error('network down');
+    },
+  };
+
+  const stateStore = {
+    getLastBalance: async () => 0,
+    setLastBalance: async () => {},
+    save: async () => {},
+  };
+
+  const healthchecks = {
+    notifyStart: async () => {
+      healthchecks.starts.push(true);
+    },
+    notifySuccess: async () => {
+      throw new Error('should not succeed');
+    },
+    notifyFailure: async (payload) => {
+      healthchecks.failures.push(payload);
+    },
+    failures: [],
+    starts: [],
+  };
+
+  const monitor = new BalanceMonitor({
+    simplefinClient,
+    notifier: { sendNotification: async () => {} },
+    stateStore,
+    config: { notifications: { targets: [] } },
+    healthchecks,
+  });
+
+  await assert.rejects(() => monitor.runOnce(), /network down/);
+  assert.equal(healthchecks.failures.length, 1);
+  assert.equal(healthchecks.failures[0].error, 'network down');
+  assert.equal(healthchecks.starts.length, 1);
+});

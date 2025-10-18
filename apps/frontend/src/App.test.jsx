@@ -13,6 +13,11 @@ const createConfigResponse = (overrides = {}) => ({
     appriseApiUrl: 'http://apprise:8000/notify',
     ...overrides.notifier,
   },
+  healthchecks: {
+    pingUrl: '',
+    configured: false,
+    ...overrides.healthchecks,
+  },
   notifications: {
     targets: [],
     ...overrides.notifications,
@@ -122,5 +127,8 @@ test('shows notification management when onboarding is finished', async () => {
 
   expect(
     await screen.findByText(/Notification recipients/i),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByPlaceholderText(/hc-ping\.com\/your-uuid/i),
   ).toBeInTheDocument();
 });

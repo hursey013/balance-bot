@@ -18,6 +18,7 @@ test('createConfig returns defaults when persisted config is empty', () => {
     path.join(DEFAULT_DATA_DIR, 'state.json'),
   );
   assert.deepEqual(config.notifications.targets, []);
+  assert.equal(config.healthchecks.pingUrl, '');
 });
 
 test('createConfig merges persisted overrides', () => {
@@ -45,6 +46,9 @@ test('createConfig merges persisted overrides', () => {
     storage: {
       stateFilePath: 'tmp/state.json',
     },
+    healthchecks: {
+      pingUrl: ' https://hc-ping.example.com/uuid ',
+    },
   };
 
   const config = createConfig({ persisted });
@@ -71,6 +75,10 @@ test('createConfig merges persisted overrides', () => {
       appriseConfigKey: 'test-users',
     },
   ]);
+  assert.equal(
+    config.healthchecks.pingUrl,
+    'https://hc-ping.example.com/uuid',
+  );
 });
 
 test('createConfig sanitizes notification targets', () => {

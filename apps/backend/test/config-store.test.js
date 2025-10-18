@@ -33,6 +33,7 @@ test('returns defaults when config file is missing', async () => {
   assert.equal(config.notifier.appriseApiUrl, 'http://apprise:8000/notify');
   assert.deepEqual(config.notifications.targets, []);
   assert.equal(config.simplefin.accessUrl, '');
+  assert.equal(config.healthchecks.pingUrl, '');
 });
 
 test('stores simplefin access url in config', async () => {
@@ -65,4 +66,23 @@ test('sanitizes notification targets', async () => {
       appriseUrls: ['discord://hook'],
     },
   ]);
+});
+
+test('stores healthchecks ping url via config update', async () => {
+  const store = new ConfigStore({ filePath: temp.file });
+  await store.setConfig({
+    healthchecksPingUrl: ' https://hc-ping.example.com/uuid ',
+  });
+
+  const config = await store.get();
+  assert.equal(
+    config.healthchecks.pingUrl,
+    'https://hc-ping.example.com/uuid',
+  );
+
+  await store.setConfig({
+    healthchecksPingUrl: '   ',
+  });
+  const cleared = await store.get();
+  assert.equal(cleared.healthchecks.pingUrl, '');
 });

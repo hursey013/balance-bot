@@ -39,6 +39,7 @@ Here’s an example message you might see:
 
 - A SimpleFIN setup token or an existing access link. Copy the whole thing so we can trade it for a long-lived key.
 - Somewhere for Apprise to deliver the news—Discord channel, Matrix room, email, you name it.
+- _(Optional)_ A [healthchecks.io](https://healthchecks.io) ping URL if you want balance-bot to report every run.
 - Docker **or** Node.js 20+ if you prefer running it directly.
 
 ## Quick Start
@@ -76,6 +77,10 @@ services:
 ```
 
 Once the containers settle, visit [http://localhost:4000](http://localhost:4000) (replace `localhost` with your NAS IP if needed). That’s your command center.
+
+## Track runs with healthchecks.io
+
+If you use [healthchecks.io](https://healthchecks.io) or a compatible service, paste your project&apos;s ping URL in step three of the setup UI. Balance-bot will trigger `/start`, `/fail`, and a JSON success payload after each polling cycle so you can keep an eye on uptime. Prefer to set it ahead of time? Provide the `HEALTHCHECKS_PING_URL` environment variable and the UI will pick it up automatically.
 
 ## License
 
