@@ -144,7 +144,7 @@ const defaultConfigTemplate = ({ filePath }) => ({
   simplefin: {
     accessUrl: '',
     cacheFilePath: 'cache.json',
-    cacheTtlMs: 60 * 60 * 1000,
+    cacheTtlMs: 5 * 60 * 1000,
   },
   notifications: {
     targets: [],
@@ -205,11 +205,15 @@ const applyDefaults = (persisted = {}, { filePath }) => {
 export const createConfig = ({ persisted = {} } = {}) => {
   const merged = applyDefaults(persisted, { filePath: DEFAULT_CONFIG_FILE });
 
-  const cacheTtlMs = normalizeCacheTtl(merged.simplefin.cacheTtlMs);
   const persistedNotifier = merged.notifier ?? {};
   const persistedHealthchecks = merged.healthchecks ?? {};
   const persistedPolling = merged.polling ?? {};
   const persistedStorage = merged.storage ?? {};
+
+  const cacheTtlOverride = readEnv('SIMPLEFIN_CACHE_TTL_MS');
+  const cacheTtlMs = normalizeCacheTtl(
+    cacheTtlOverride ?? merged.simplefin.cacheTtlMs,
+  );
 
   const persistedApprise = trim(persistedNotifier.appriseApiUrl) || undefined;
   const appriseApiUrl =

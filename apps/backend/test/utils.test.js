@@ -8,10 +8,10 @@ import {
 } from '../src/utils.js';
 
 test('normalizeCacheTtl returns defaults and clamps negatives', () => {
-  assert.equal(normalizeCacheTtl(undefined), 60 * 60 * 1000);
+  assert.equal(normalizeCacheTtl(undefined), 5 * 60 * 1000);
   assert.equal(normalizeCacheTtl('900000'), 900000);
   assert.equal(normalizeCacheTtl(-5), 0);
-  assert.equal(normalizeCacheTtl('oops'), 60 * 60 * 1000);
+  assert.equal(normalizeCacheTtl('oops'), 5 * 60 * 1000);
 });
 
 test('resolveBalanceInfo prefers available balance and defaults currency', () => {

@@ -6,12 +6,12 @@
 const trim = (value) => value?.toString?.().trim?.() ?? '';
 
 /**
- * Normalize a cache TTL value in milliseconds, falling back to one hour.
+ * Normalize a cache TTL value in milliseconds, defaulting to five minutes.
  * @param {unknown} value
  * @returns {number}
  */
 const normalizeCacheTtl = (value) => {
-  const defaultTtl = 60 * 60 * 1000;
+  const defaultTtl = 5 * 60 * 1000;
   if (value === undefined) {
     return defaultTtl;
   }

@@ -58,6 +58,8 @@ services:
       TZ: 'America/New_York' # adjust to match your timezone
       # Apprise endpoint used to deliver notifications
       APPRISE_API_URL: 'http://apprise:8000/notify'
+      # Cache SimpleFIN balances in milliseconds (0 disables caching)
+      SIMPLEFIN_CACHE_TTL_MS: '300000'
       # Cron expression (UTC) controlling how often balances are checked
       BALANCE_BOT_CRON: '0 * * * *'
       # Optional healthchecks.io (or compatible) ping URL (remove if unused)

@@ -30,6 +30,7 @@ test('createConfig returns defaults when persisted config is empty', (t) => {
     BALANCE_BOT_CRON: undefined,
     HEALTHCHECKS_PING_URL: undefined,
     BALANCE_BOT_STATE_FILE: undefined,
+    SIMPLEFIN_CACHE_TTL_MS: undefined,
   });
 
   const config = createConfig();
@@ -38,7 +39,7 @@ test('createConfig returns defaults when persisted config is empty', (t) => {
     config.simplefin.cacheFilePath,
     path.join(DEFAULT_DATA_DIR, 'cache.json'),
   );
-  assert.equal(config.simplefin.cacheTtlMs, 60 * 60 * 1000);
+  assert.equal(config.simplefin.cacheTtlMs, 5 * 60 * 1000);
   assert.equal(config.polling.cronExpression, '0 * * * *');
   assert.equal(config.notifier.appriseApiUrl, 'http://apprise:8000/notify');
   assert.equal(
@@ -57,6 +58,7 @@ test('createConfig merges persisted overrides', (t) => {
     BALANCE_BOT_CRON: undefined,
     HEALTHCHECKS_PING_URL: undefined,
     BALANCE_BOT_STATE_FILE: undefined,
+    SIMPLEFIN_CACHE_TTL_MS: undefined,
   });
 
   const persisted = {
@@ -126,6 +128,7 @@ test('environment variables override persisted config', (t) => {
     BALANCE_BOT_CRON: '*/10 * * * *',
     HEALTHCHECKS_PING_URL: ' https://hc.env/uuid ',
     BALANCE_BOT_STATE_FILE: ' /var/lib/balance/state.json ',
+    SIMPLEFIN_CACHE_TTL_MS: '0',
   });
 
   const persisted = {
@@ -144,6 +147,7 @@ test('environment variables override persisted config', (t) => {
   };
 
   const config = createConfig({ persisted });
+  assert.equal(config.simplefin.cacheTtlMs, 0);
   assert.equal(
     config.notifier.appriseApiUrl,
     'https://apprise.example.com/notify',
