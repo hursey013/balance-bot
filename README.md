@@ -12,7 +12,6 @@
 
 <p align="center">
   <a href="https://github.com/hursey013/balance-bot/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/hursey013/balance-bot/ci.yml?label=CI&logo=github"></a>
-  <a href="#"><img src="https://healthchecks.io/b/2/ef357726-9130-4e27-a62f-31f261558af1.svg" alt="balance-bot"></a>
   <a href="https://github.com/hursey013/balance-bot/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-0EA5E9"></a>
   <a href="https://ghcr.io/hursey013/balance-bot"><img alt="Image" src="https://img.shields.io/badge/ghcr-image-blue"></a>
 </p>
