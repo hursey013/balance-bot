@@ -625,36 +625,21 @@ const App = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState([]);
-  const [appriseApiUrl, setAppriseApiUrl] = useState(
-    'http://apprise:8000/notify',
-  );
   const [targets, setTargets] = useState([]);
   const [lastSavedTargets, setLastSavedTargets] = useState([]);
-  const [healthchecksPingUrl, setHealthchecksPingUrl] = useState('');
-  const [lastSavedHealthchecksPingUrl, setLastSavedHealthchecksPingUrl] =
-    useState('');
+  const [environment, setEnvironment] = useState(null);
   const [setupToken, setSetupToken] = useState('');
   const [accessUrl, setAccessUrl] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [accessPreview, setAccessPreview] = useState(null);
   const [booting, setBooting] = useState(true);
-  const healthchecksConfigured = Boolean(
-    (healthchecksPingUrl ?? '').trim(),
-  );
-  const isAdminView = !booting && currentStep === 3;
+  const isAdminView = !booting && currentStep === 2;
   const successMessageRef = useRef(null);
   const [collapseVersion, setCollapseVersion] = useState(0);
   const hasConfigChanges = useMemo(
-    () =>
-      JSON.stringify(targets) !== JSON.stringify(lastSavedTargets) ||
-      (healthchecksPingUrl ?? '') !== (lastSavedHealthchecksPingUrl ?? ''),
-    [
-      targets,
-      lastSavedTargets,
-      healthchecksPingUrl,
-      lastSavedHealthchecksPingUrl,
-    ],
+    () => JSON.stringify(targets) !== JSON.stringify(lastSavedTargets),
+    [targets, lastSavedTargets],
   );
 
   useEffect(() => {
@@ -672,16 +657,12 @@ const App = () => {
         const response = await fetch('/api/config');
         if (!response.ok) throw new Error('Failed to load configuration');
         const data = await response.json();
-        setAppriseApiUrl(data.notifier.appriseApiUrl);
         const bootTargets = data.notifications.targets ?? [];
         setTargets(bootTargets);
         setLastSavedTargets(bootTargets);
-        const bootHealthchecks = data.healthchecks?.pingUrl ?? '';
-        setHealthchecksPingUrl(bootHealthchecks);
-        setLastSavedHealthchecksPingUrl(bootHealthchecks);
+        setEnvironment(data.environment ?? null);
 
         const simplefinConfigured = Boolean(data.simplefin.configured);
-        const appriseComplete = Boolean(data.onboarding?.appriseConfigured);
 
         if (simplefinConfigured) {
           setAccessPreview(data.simplefin.accessUrlPreview);
@@ -696,7 +677,7 @@ const App = () => {
           }
         }
 
-        const nextStep = simplefinConfigured ? (appriseComplete ? 3 : 2) : 1;
+        const nextStep = simplefinConfigured ? 2 : 1;
         setCurrentStep(nextStep);
       } catch (configError) {
         console.error(configError);
@@ -755,48 +736,6 @@ const App = () => {
     }
   };
 
-  const handleAppriseSave = async (event) => {
-    event.preventDefault();
-    setLoading(true);
-    setError('');
-    setMessage('');
-
-    try {
-      const response = await fetch('/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appriseApiUrl,
-          healthchecksPingUrl,
-          targets,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody.error || 'Unable to save configuration');
-      }
-
-      const data = await response.json();
-      const savedTargets = data.notifications.targets ?? [];
-      setTargets(savedTargets);
-      setLastSavedTargets(savedTargets);
-      setAppriseApiUrl(data.notifier.appriseApiUrl);
-      const savedPingUrl = data.healthchecks?.pingUrl ?? '';
-      setHealthchecksPingUrl(savedPingUrl);
-      setLastSavedHealthchecksPingUrl(savedPingUrl);
-      setMessage('Apprise is ready to relay your updates.');
-      setCurrentStep(3);
-    } catch (saveError) {
-      setError(
-        saveError.message ||
-          'We were not able to save Apprise details. Give it another try.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleTargetsSave = async () => {
     setLoading(true);
     setError('');
@@ -807,7 +746,6 @@ const App = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          appriseApiUrl,
           targets,
         }),
       });
@@ -821,11 +759,10 @@ const App = () => {
       const savedTargets = data.notifications.targets ?? [];
       setTargets(savedTargets);
       setLastSavedTargets(savedTargets);
-      setAppriseApiUrl(data.notifier.appriseApiUrl);
-      const savedPingUrl = data.healthchecks?.pingUrl ?? '';
-      setHealthchecksPingUrl(savedPingUrl);
-      setLastSavedHealthchecksPingUrl(savedPingUrl);
-      setMessage('All set! Your crew will get updates as balances change.');
+      setEnvironment(data.environment ?? environment);
+      setMessage(
+        'Recipients updated. Balance Bot will use them on the next run.',
+      );
       setCollapseVersion((value) => value + 1);
     } catch (saveError) {
       setError(
@@ -1005,96 +942,51 @@ const App = () => {
               ) : null}
 
               {currentStep === 2 ? (
-                <form
-                  className="flex flex-col gap-4"
-                  onSubmit={handleAppriseSave}
-                >
-                  <div>
-                    <h2 className="text-xl font-semibold">Connect Apprise</h2>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Point Balance Bot at your{' '}
-                      <a
-                        href="https://github.com/caronc/apprise"
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="text-primary underline-offset-2 hover:underline"
-                      >
-                        Apprise notification server
-                      </a>{' '}
-                      so alerts reach the right places.
-                    </p>
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium text-slate-700"
-                      htmlFor="apprise-url"
-                    >
-                      Apprise API endpoint
-                    </label>
-                    <input
-                      id="apprise-url"
-                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
-                      value={appriseApiUrl}
-                      onChange={(event) => setAppriseApiUrl(event.target.value)}
-                    />
-                    <p className="mt-2 text-xs text-slate-600">
-                      Point us at your Apprise server so we can move on to the
-                      notification dashboard.
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={loading || !(appriseApiUrl || '').trim()}
-                  >
-                    {loading ? 'Saving…' : 'Save and continue'}
-                  </button>
-                </form>
-              ) : null}
-
-              {currentStep === 3 ? (
                 <div className="flex flex-col gap-6">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
                     <h3 className="text-sm font-semibold text-slate-700">
-                      Healthchecks monitor <span className="text-xs">(optional)</span>
+                      Runtime environment
                     </h3>
                     <p className="mt-1 text-xs text-slate-600">
-                      Keep tabs on balance-bot from{' '}
-                      <a
-                        href="https://healthchecks.io"
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="font-medium text-primary underline-offset-2 hover:underline"
-                      >
-                        healthchecks.io
-                      </a>{' '}
-                      or a compatible service by pasting the unique ping URL
-                      below. We&apos;ll send <code className="font-mono">/start</code>, <code className="font-mono">/fail</code>, and
-                      JSON payloads after every run.
+                      Balance Bot reads these values from environment variables.
+                      Update them in your `.env` file or container settings.
                     </p>
-                    <input
-                      id="healthchecks-ping-url"
-                      className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60"
-                      placeholder="https://hc-ping.com/your-uuid"
-                      value={healthchecksPingUrl}
-                      onChange={(event) =>
-                        setHealthchecksPingUrl(event.target.value)
-                      }
-                    />
-                    <p className="mt-2 text-xs text-slate-600">
-                      {healthchecksConfigured ? (
-                        <>
-                          We&apos;ll ping{' '}
-                          <span className="font-mono">
-                            {healthchecksPingUrl}
-                          </span>{' '}
-                          as runs begin and finish.
-                        </>
-                      ) : (
-                        'Leave this blank if you do not need uptime tracking.'
-                      )}
-                    </p>
+                    <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
+                      <div>
+                        <dt className="font-semibold text-slate-700">
+                          Apprise API URL
+                        </dt>
+                        <dd className="mt-0.5 break-words font-mono text-slate-600">
+                          {environment?.appriseApiUrl || 'http://apprise:8000/notify'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-slate-700">
+                          Polling schedule
+                        </dt>
+                        <dd className="mt-0.5 font-mono text-slate-600">
+                          {environment?.cronExpression || '0 * * * *'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-slate-700">
+                          Healthchecks ping URL
+                        </dt>
+                        <dd className="mt-0.5 break-words font-mono text-slate-600">
+                          {environment?.healthchecksPingUrl
+                            ? environment.healthchecksPingUrl
+                            : 'Not configured'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-slate-700">
+                          State file location
+                        </dt>
+                        <dd className="mt-0.5 break-all font-mono text-slate-600">
+                          {environment?.stateFilePath || 'Loading…'}
+                        </dd>
+                      </div>
+                    </dl>
                   </div>
 
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1103,8 +995,7 @@ const App = () => {
                         Notification recipients
                       </h2>
                       <p className="mt-1 text-xs text-slate-600">
-                        Alerts flow through Apprise at{' '}
-                        <span className="font-mono">{appriseApiUrl}</span>.
+                        Choose who should hear about balance changes.
                       </p>
                     </div>
                     <button
@@ -1147,7 +1038,7 @@ const App = () => {
                         onClick={handleTargetsSave}
                         disabled={loading}
                       >
-                        {loading ? 'Saving…' : 'Save settings'}
+                        {loading ? 'Saving…' : 'Save recipients'}
                       </button>
                     ) : null}
                     {accounts.length === 0 ? (

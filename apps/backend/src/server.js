@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import logger from './logger.js';
-import BalanceBotService, { ConfigStore } from './index.js';
+import BalanceBotService, { ConfigStore, createConfig } from './index.js';
 import { decodeSetupToken, exchangeSetupToken } from './simplefin.js';
 import { trim, redactAccessUrl } from './utils.js';
 
@@ -27,7 +27,8 @@ const createApp = async () => {
   await botService.start();
 
   const formatConfigResponse = async () => {
-    const config = await configStore.get();
+    const persisted = await configStore.get();
+    const config = createConfig({ persisted });
     return {
       simplefin: {
         configured: Boolean(config.simplefin.accessUrl),
@@ -35,24 +36,16 @@ const createApp = async () => {
           ? redactAccessUrl(config.simplefin.accessUrl)
           : null,
       },
-      notifier: {
-        appriseApiUrl: config.notifier.appriseApiUrl,
-      },
-      healthchecks: {
-        pingUrl: config.healthchecks?.pingUrl ?? '',
-        configured: Boolean(config.healthchecks?.pingUrl),
-      },
       notifications: {
         targets: config.notifications.targets,
       },
-      polling: {
+      environment: {
+        appriseApiUrl: config.notifier.appriseApiUrl,
         cronExpression: config.polling.cronExpression,
+        healthchecksPingUrl: config.healthchecks.pingUrl ?? '',
+        stateFilePath: config.storage.stateFilePath,
       },
-      onboarding: {
-        appriseConfigured: Boolean(
-          config.metadata?.onboarding?.appriseConfigured,
-        ),
-      },
+      onboarding: config.metadata.onboarding,
     };
   };
 
@@ -110,14 +103,15 @@ const createApp = async () => {
 
   app.put('/api/config', async (req, res, next) => {
     try {
-      const { appriseApiUrl, cronExpression, targets, healthchecksPingUrl } =
-        req.body ?? {};
-      await configStore.setConfig({
-        appriseApiUrl,
-        cronExpression,
-        targets,
-        healthchecksPingUrl,
-      });
+      const { targets } = req.body ?? {};
+      if (!Array.isArray(targets)) {
+        res.status(400).json({
+          error: 'Notification targets must be provided as an array.',
+        });
+        return;
+      }
+
+      await configStore.setNotificationTargets(targets);
       await botService.reload();
       res.json(await formatConfigResponse());
     } catch (error) {

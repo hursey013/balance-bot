@@ -9,25 +9,20 @@ const createConfigResponse = (overrides = {}) => ({
     accessUrlPreview: null,
     ...overrides.simplefin,
   },
-  notifier: {
-    appriseApiUrl: 'http://apprise:8000/notify',
-    ...overrides.notifier,
-  },
-  healthchecks: {
-    pingUrl: '',
-    configured: false,
-    ...overrides.healthchecks,
-  },
   notifications: {
     targets: [],
     ...overrides.notifications,
   },
-  polling: {
+  environment: {
+    appriseApiUrl: 'http://apprise:8000/notify',
     cronExpression: '0 * * * *',
-    ...overrides.polling,
+    healthchecksPingUrl: '',
+    stateFilePath: '/app/data/state.json',
+    ...overrides.environment,
   },
   onboarding: {
-    appriseConfigured: false,
+    simplefinConfigured: false,
+    targetsConfigured: false,
     ...overrides.onboarding,
   },
 });
@@ -63,7 +58,7 @@ test('renders setup token input when onboarding has not run', async () => {
   ).toBeInTheDocument();
 });
 
-test('prompts for Apprise when SimpleFIN is already configured', async () => {
+test('shows notification management when SimpleFIN is configured', async () => {
   globalThis.fetch = vi.fn((url) => {
     if (url === '/api/config') {
       return Promise.resolve({
@@ -74,41 +69,6 @@ test('prompts for Apprise when SimpleFIN is already configured', async () => {
               simplefin: {
                 configured: true,
                 accessUrlPreview: 'https://redacted',
-              },
-            }),
-          ),
-      });
-    }
-    if (url === '/api/simplefin/accounts') {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ accounts: [{ id: 'acct-1' }] }),
-      });
-    }
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-  });
-
-  render(<App />);
-
-  expect(
-    await screen.findByLabelText(/Apprise API endpoint/i),
-  ).toBeInTheDocument();
-});
-
-test('shows notification management when onboarding is finished', async () => {
-  globalThis.fetch = vi.fn((url) => {
-    if (url === '/api/config') {
-      return Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            createConfigResponse({
-              simplefin: {
-                configured: true,
-                accessUrlPreview: 'https://redacted',
-              },
-              onboarding: {
-                appriseConfigured: true,
               },
             }),
           ),
@@ -128,7 +88,53 @@ test('shows notification management when onboarding is finished', async () => {
   expect(
     await screen.findByText(/Notification recipients/i),
   ).toBeInTheDocument();
+});
+
+test('renders runtime environment details from the API', async () => {
+  globalThis.fetch = vi.fn((url) => {
+    if (url === '/api/config') {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            createConfigResponse({
+              simplefin: {
+                configured: true,
+                accessUrlPreview: 'https://redacted',
+              },
+              environment: {
+                appriseApiUrl: 'http://apprise.local/notify',
+                cronExpression: '*/30 * * * *',
+                healthchecksPingUrl: 'https://hc-ping.com/uuid',
+                stateFilePath: '/data/state.json',
+              },
+            }),
+          ),
+      });
+    }
+    if (url === '/api/simplefin/accounts') {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ accounts: [{ id: 'acct-1' }] }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
+
+  render(<App />);
+
   expect(
-    await screen.findByPlaceholderText(/hc-ping\.com\/your-uuid/i),
+    await screen.findByText(/Notification recipients/i),
   ).toBeInTheDocument();
+  const runtimeHeadings = await screen.findAllByText(/Runtime environment/i);
+  expect(runtimeHeadings.length).toBeGreaterThan(0);
+  expect(
+    await screen.findByText(/http:\/\/apprise\.local\/notify/i),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByText(/\*\/30 \* \* \* \*/i),
+  ).toBeInTheDocument();
+  expect(await screen.findByText(/https:\/\/hc-ping\.com\/uuid/i)).toBeInTheDocument();
+  const statePaths = await screen.findAllByText(/\/data\/state\.json/i);
+  expect(statePaths.length).toBeGreaterThan(0);
 });

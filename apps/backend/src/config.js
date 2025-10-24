@@ -5,6 +5,15 @@ import { fileURLToPath } from 'node:url';
 import logger from './logger.js';
 import { trim, normalizeCacheTtl } from './utils.js';
 
+/**
+ * Configuration management utilities for balance-bot.
+ *
+ * The backend persists only the pieces of state that require user interaction
+ * through the onboarding UI (SimpleFIN access links and notification targets).
+ * Everything else is sourced from environment variables so deployments can rely
+ * on familiar `.env` or container-based configuration.
+ */
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
@@ -18,47 +27,72 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const clone = (value) => structuredClone(value);
 
 /**
- * Normalize notification targets by trimming identifiers and removing duplicates.
+ * Treat unknown values as empty arrays.
+ * @param {any} value
+ * @returns {Array}
+ */
+const asArray = (value) => (Array.isArray(value) ? value : []);
+
+/**
+ * Normalize a list of values by trimming whitespace and dropping empty entries.
+ * Duplicates are removed to avoid sending the same notification twice.
+ * @param {any} value
+ * @returns {string[]}
+ */
+const normalizeList = (value) => {
+  const seen = new Set();
+  for (const entry of asArray(value)) {
+    const trimmed = trim(entry);
+    if (trimmed) {
+      seen.add(trimmed);
+    }
+  }
+  return Array.from(seen);
+};
+
+/**
+ * Normalize notification targets while largely trusting user input.
+ * We trim common string fields and ensure list properties are arrays, but avoid
+ * aggressively pruning other values so advanced users can extend the payload.
  * @param {Array<Record<string, any>>|undefined} targets
  * @returns {Array<Record<string, any>>}
  */
-const sanitizeTargets = (targets) => {
-  if (!Array.isArray(targets)) return [];
-  const uniqueTrimmed = (items) => {
-    if (!Array.isArray(items)) return [];
-    const trimmedItems = items.map((value) => trim(value)).filter(Boolean);
-    return Array.from(new Set(trimmedItems));
-  };
-
-  return targets.map((target) => {
-    const accountIds = uniqueTrimmed(target.accountIds);
-    const appriseUrls = uniqueTrimmed(target.appriseUrls);
-    const appriseConfigKey = target.appriseConfigKey
-      ? trim(target.appriseConfigKey)
-      : '';
-    const name =
-      typeof target.name === 'string' ? target.name.trim() : target.name;
-
-    const sanitized = {
+const normalizeTargets = (targets) =>
+  asArray(targets).map((target) => {
+    const normalized = {
       ...target,
-      name,
-      accountIds,
+      name:
+        typeof target?.name === 'string' ? target.name.trim() : target?.name,
+      accountIds: normalizeList(target?.accountIds),
+      appriseUrls: normalizeList(target?.appriseUrls),
     };
 
-    if (appriseUrls.length) {
-      sanitized.appriseUrls = appriseUrls;
-    } else {
-      delete sanitized.appriseUrls;
-    }
+    const appriseConfigKey =
+      typeof target?.appriseConfigKey === 'string'
+        ? target.appriseConfigKey.trim()
+        : '';
 
     if (appriseConfigKey) {
-      sanitized.appriseConfigKey = appriseConfigKey;
+      normalized.appriseConfigKey = appriseConfigKey;
     } else {
-      delete sanitized.appriseConfigKey;
+      delete normalized.appriseConfigKey;
     }
 
-    return sanitized;
+    if (normalized.appriseUrls.length === 0) {
+      delete normalized.appriseUrls;
+    }
+
+    return normalized;
   });
+
+/**
+ * Read and trim an environment variable, returning undefined when unset.
+ * @param {string} name
+ * @returns {string|undefined}
+ */
+const readEnv = (name) => {
+  const value = trim(process.env[name]);
+  return value || undefined;
 };
 
 /**
@@ -66,7 +100,7 @@ const sanitizeTargets = (targets) => {
  * @returns {string}
  */
 const resolveDataDir = () => {
-  const configured = trim(process.env.BALANCE_BOT_DATA_DIR);
+  const configured = readEnv('BALANCE_BOT_DATA_DIR');
   if (configured) {
     return path.isAbsolute(configured)
       ? path.resolve(configured)
@@ -80,11 +114,10 @@ const DEFAULT_STATE_FILE = path.join(DEFAULT_DATA_DIR, 'state.json');
 const DEFAULT_CACHE_FILE = path.join(DEFAULT_DATA_DIR, 'cache.json');
 const DEFAULT_CONFIG_FILE = path.join(DEFAULT_DATA_DIR, 'config.json');
 const DEFAULT_APPRISE_URL = 'http://apprise:8000/notify';
-const DEFAULT_HEALTHCHECKS_PING_URL =
-  trim(process.env.HEALTHCHECKS_PING_URL) || '';
 const DEFAULT_CRON = '0 * * * *';
 const DEFAULT_ONBOARDING_STATE = {
-  appriseConfigured: false,
+  simplefinConfigured: false,
+  targetsConfigured: false,
 };
 
 /**
@@ -113,17 +146,8 @@ const defaultConfigTemplate = ({ filePath }) => ({
     cacheFilePath: 'cache.json',
     cacheTtlMs: 60 * 60 * 1000,
   },
-  notifier: {
-    appriseApiUrl: DEFAULT_APPRISE_URL,
-  },
-  healthchecks: {
-    pingUrl: DEFAULT_HEALTHCHECKS_PING_URL,
-  },
   notifications: {
     targets: [],
-  },
-  polling: {
-    cronExpression: DEFAULT_CRON,
   },
   storage: {
     stateFilePath: 'state.json',
@@ -151,21 +175,9 @@ const applyDefaults = (persisted = {}, { filePath }) => {
       ...defaults.simplefin,
       ...(persisted.simplefin ?? {}),
     },
-    notifier: {
-      ...defaults.notifier,
-      ...(persisted.notifier ?? {}),
-    },
-    healthchecks: {
-      ...defaults.healthchecks,
-      ...(persisted.healthchecks ?? {}),
-    },
     notifications: {
       ...defaults.notifications,
       ...(persisted.notifications ?? {}),
-    },
-    polling: {
-      ...defaults.polling,
-      ...(persisted.polling ?? {}),
     },
     storage: {
       ...defaults.storage,
@@ -181,7 +193,7 @@ const applyDefaults = (persisted = {}, { filePath }) => {
     },
   };
 
-  merged.notifications.targets = sanitizeTargets(merged.notifications.targets);
+  merged.notifications.targets = normalizeTargets(merged.notifications.targets);
   return merged;
 };
 
@@ -194,8 +206,46 @@ export const createConfig = ({ persisted = {} } = {}) => {
   const merged = applyDefaults(persisted, { filePath: DEFAULT_CONFIG_FILE });
 
   const cacheTtlMs = normalizeCacheTtl(merged.simplefin.cacheTtlMs);
+  const persistedNotifier = merged.notifier ?? {};
+  const persistedHealthchecks = merged.healthchecks ?? {};
+  const persistedPolling = merged.polling ?? {};
+  const persistedStorage = merged.storage ?? {};
 
-  return {
+  const persistedApprise = trim(persistedNotifier.appriseApiUrl) || undefined;
+  const appriseApiUrl =
+    readEnv('APPRISE_API_URL') ??
+    persistedApprise ??
+    DEFAULT_APPRISE_URL;
+
+  const persistedCron =
+    trim(persistedPolling.cronExpression) || undefined;
+  const cronExpression =
+    readEnv('BALANCE_BOT_CRON') ??
+    persistedCron ??
+    DEFAULT_CRON;
+
+  const persistedPing =
+    trim(persistedHealthchecks.pingUrl) || undefined;
+  const healthchecksPingUrl =
+    readEnv('HEALTHCHECKS_PING_URL') ??
+    persistedPing ??
+    '';
+
+  const persistedStateFile =
+    trim(persistedStorage.stateFilePath) || undefined;
+
+  const configuredStateFile =
+    readEnv('BALANCE_BOT_STATE_FILE') ?? persistedStateFile;
+
+  const metadata = {
+    ...merged.metadata,
+    onboarding: {
+      ...DEFAULT_ONBOARDING_STATE,
+      ...(merged.metadata?.onboarding ?? {}),
+    },
+  };
+
+  const config = {
     simplefin: {
       accessUrl: trim(merged.simplefin.accessUrl),
       cacheFilePath: resolvePath(
@@ -205,31 +255,35 @@ export const createConfig = ({ persisted = {} } = {}) => {
       cacheTtlMs,
     },
     notifier: {
-      appriseApiUrl: trim(merged.notifier.appriseApiUrl) || DEFAULT_APPRISE_URL,
+      appriseApiUrl,
     },
     healthchecks: {
-      pingUrl: trim(merged.healthchecks?.pingUrl),
+      pingUrl: healthchecksPingUrl,
     },
     notifications: {
       targets: merged.notifications.targets,
     },
     polling: {
-      cronExpression: trim(merged.polling.cronExpression) || DEFAULT_CRON,
+      cronExpression,
     },
     storage: {
       stateFilePath: resolvePath(
-        merged.storage.stateFilePath,
+        configuredStateFile,
         DEFAULT_STATE_FILE,
       ),
     },
     metadata: {
       filePath: resolvePath(merged.metadata.filePath, DEFAULT_CONFIG_FILE),
-      onboarding: {
-        ...DEFAULT_ONBOARDING_STATE,
-        ...(merged.metadata.onboarding ?? {}),
-      },
+      onboarding: metadata.onboarding,
     },
   };
+
+  config.metadata.onboarding.simplefinConfigured = Boolean(
+    config.simplefin.accessUrl,
+  );
+  config.metadata.onboarding.targetsConfigured =
+    config.notifications.targets.length > 0;
+  return config;
 };
 
 /**
@@ -281,7 +335,7 @@ class ConfigStore {
    */
   async _write(data) {
     const payload = clone(data);
-    payload.notifications.targets = sanitizeTargets(
+    payload.notifications.targets = normalizeTargets(
       payload.notifications.targets,
     );
     await atomicWriteJson(this.filePath, payload);
@@ -331,35 +385,13 @@ class ConfigStore {
         ...current.simplefin,
         accessUrl: trimmed,
       },
-    }));
-  }
-
-  /**
-   * Update the Apprise API endpoint.
-   * @param {string} appriseApiUrl
-   * @returns {Promise<Record<string, any>>}
-   */
-  async setAppriseApiUrl(appriseApiUrl) {
-    return this.update(async (current) => ({
-      ...current,
-      notifier: {
-        ...current.notifier,
-        appriseApiUrl: trim(appriseApiUrl) || current.notifier.appriseApiUrl,
-      },
-    }));
-  }
-
-  /**
-   * Update the cron expression controlling balance checks.
-   * @param {string} cronExpression
-   * @returns {Promise<Record<string, any>>}
-   */
-  async setCronExpression(cronExpression) {
-    return this.update(async (current) => ({
-      ...current,
-      polling: {
-        ...current.polling,
-        cronExpression: trim(cronExpression) || current.polling.cronExpression,
+      metadata: {
+        ...current.metadata,
+        onboarding: {
+          ...DEFAULT_ONBOARDING_STATE,
+          ...(current.metadata?.onboarding ?? {}),
+          simplefinConfigured: true,
+        },
       },
     }));
   }
@@ -370,64 +402,29 @@ class ConfigStore {
    * @returns {Promise<Record<string, any>>}
    */
   async setNotificationTargets(targets) {
-    return this.update(async (current) => ({
-      ...current,
-      notifications: {
-        ...current.notifications,
-        targets: sanitizeTargets(Array.isArray(targets) ? targets : []),
-      },
-    }));
+    return this.update(async (current) => {
+      const sanitizedTargets = normalizeTargets(targets);
+      return {
+        ...current,
+        notifications: {
+          ...current.notifications,
+          targets: sanitizedTargets,
+        },
+        metadata: {
+          ...current.metadata,
+          onboarding: {
+            ...DEFAULT_ONBOARDING_STATE,
+            ...(current.metadata?.onboarding ?? {}),
+            targetsConfigured: sanitizedTargets.length > 0,
+          },
+        },
+      };
+    });
   }
 
-  /**
-   * Batch-update core configuration knobs used by the onboarding UI.
-   * @param {{ appriseApiUrl?: string, cronExpression?: string, targets?: Array<Record<string, any>> }} params
-   * @returns {Promise<Record<string, any>>}
-   */
-  async setConfig({
-    appriseApiUrl,
-    cronExpression,
-    targets,
-    healthchecksPingUrl,
-  }) {
-    const onboardingDefaults = { ...DEFAULT_ONBOARDING_STATE };
-    return this.update(async (current) => ({
-      ...current,
-      notifier: {
-        ...current.notifier,
-        appriseApiUrl: trim(appriseApiUrl) || current.notifier.appriseApiUrl,
-      },
-      polling: {
-        ...current.polling,
-        cronExpression: trim(cronExpression) || current.polling.cronExpression,
-      },
-      notifications: {
-        ...current.notifications,
-        targets: sanitizeTargets(Array.isArray(targets) ? targets : []),
-      },
-      healthchecks: {
-        ...current.healthchecks,
-        pingUrl:
-          healthchecksPingUrl !== undefined
-            ? trim(healthchecksPingUrl)
-            : current.healthchecks?.pingUrl ?? '',
-      },
-      metadata: {
-        ...current.metadata,
-        onboarding: {
-          ...onboardingDefaults,
-          ...(current.metadata?.onboarding ?? {}),
-          appriseConfigured:
-            appriseApiUrl !== undefined
-              ? Boolean(trim(appriseApiUrl) || current.notifier.appriseApiUrl)
-              : Boolean(current.metadata?.onboarding?.appriseConfigured),
-        },
-      },
-    }));
-  }
 }
 
-export { sanitizeTargets, DEFAULT_DATA_DIR, ConfigStore };
+export { normalizeTargets, DEFAULT_DATA_DIR, ConfigStore };
 
 /** @typedef {ReturnType<typeof createConfig>} BalanceBotConfig */
 

@@ -56,7 +56,14 @@ services:
     ports:
       - '4000:4000' # opens the setup site
     environment:
-      TZ: 'America/New_York'
+      TZ: 'America/New_York' # adjust to match your timezone
+      # Apprise endpoint used to deliver notifications
+      APPRISE_API_URL: 'http://apprise:8000/notify'
+      # Cron expression (UTC) controlling how often balances are checked
+      BALANCE_BOT_CRON: '0 * * * *'
+      # Optional healthchecks.io (or compatible) ping URL (remove if unused)
+      HEALTHCHECKS_PING_URL: ''
+      # Directory for persisted config, cache, and state files
     volumes:
       - ./data:/app/data
     depends_on:

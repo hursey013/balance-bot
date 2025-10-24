@@ -30,10 +30,10 @@ afterEach(async () => {
 test('returns defaults when config file is missing', async () => {
   const store = new ConfigStore({ filePath: temp.file });
   const config = await store.get();
-  assert.equal(config.notifier.appriseApiUrl, 'http://apprise:8000/notify');
   assert.deepEqual(config.notifications.targets, []);
   assert.equal(config.simplefin.accessUrl, '');
-  assert.equal(config.healthchecks.pingUrl, '');
+  assert.equal(config.metadata.onboarding.simplefinConfigured, false);
+  assert.equal(config.metadata.onboarding.targetsConfigured, false);
 });
 
 test('stores simplefin access url in config', async () => {
@@ -46,6 +46,7 @@ test('stores simplefin access url in config', async () => {
     config.simplefin.accessUrl,
     'https://user:pass@bridge.simplefin.org/simplefin',
   );
+  assert.equal(config.metadata.onboarding.simplefinConfigured, true);
 });
 
 test('sanitizes notification targets', async () => {
@@ -66,23 +67,17 @@ test('sanitizes notification targets', async () => {
       appriseUrls: ['discord://hook'],
     },
   ]);
+  assert.equal(config.metadata.onboarding.targetsConfigured, true);
 });
 
-test('stores healthchecks ping url via config update', async () => {
+test('clearing notification targets updates onboarding metadata', async () => {
   const store = new ConfigStore({ filePath: temp.file });
-  await store.setConfig({
-    healthchecksPingUrl: ' https://hc-ping.example.com/uuid ',
-  });
+  await store.setNotificationTargets([
+    { name: 'Family', accountIds: ['acct-1'] },
+  ]);
+  await store.setNotificationTargets([]);
 
   const config = await store.get();
-  assert.equal(
-    config.healthchecks.pingUrl,
-    'https://hc-ping.example.com/uuid',
-  );
-
-  await store.setConfig({
-    healthchecksPingUrl: '   ',
-  });
-  const cleared = await store.get();
-  assert.equal(cleared.healthchecks.pingUrl, '');
+  assert.deepEqual(config.notifications.targets, []);
+  assert.equal(config.metadata.onboarding.targetsConfigured, false);
 });
